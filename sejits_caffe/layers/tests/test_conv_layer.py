@@ -11,7 +11,7 @@ def numpy_convolve(batch, weights, expected):
 
 class ConvLayerTest(LayerTest):
     def test_simple(self):
-        conv = ConvLayer()
+        conv = ConvLayer(self.in_batch, self.actual)
         conv.forward(self.in_batch, self.actual)
         numpy_convolve(self.in_batch, conv.weights, self.expected)
         self._check()
