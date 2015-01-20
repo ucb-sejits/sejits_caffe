@@ -32,14 +32,18 @@ im2col_kernel = StringTemplate(
 
 
 class Im2Col(LazySpecializedFunction):
+    def __init__(self, channels, size, kernel_size, padding, stride):
+        self.channels = channels
+        self.size = size
+        self.padding = padding
+        self.stride = stride
+
     def args_to_subconfig(self, args):
         A = args[0]
         return (np.ctypeslib.ndpointer(A.dtype, A.ndim, A.shape), )
 
     def transform(self, tree, program_cfg):
         pass
-
-im2col = Im2Col()
 
 
 class ConvLayer(BaseLayer):
@@ -95,14 +99,17 @@ class ConvLayer(BaseLayer):
             else:
                 self.blobs.resize(1)
 
+        self.im2col = Im2Col(channels, bottom[0].size,
+                             self.kernel_size, self.padding, self.stride)
+
     def forward(self, bottom, top):
         weights = self.blobs[0]
 
-        # for bottom_data, top_data in zip(bottom, top):
-        #     for n in self.num:
-        #         col_data = im2col(bottom_data)
-        #         for g in self.group:
-        #             gemm(col_data[g], weights[g], top_data[g])
+        for bottom_data, top_data in zip(bottom, top):
+            for n in self.num:
+                col_data = self.im2col(bottom_data)
+                for g in self.group:
+                    np.dot(col_data[g], weights[g], top_data[g])
 
-        #             if self.bias_term:
-        #                 gemm(self.blobs[1], self.bias_multiplier, top_data)
+                    if self.bias_term:
+                        np.dot(self.blobs[1], self.bias_multiplier, top_data)
