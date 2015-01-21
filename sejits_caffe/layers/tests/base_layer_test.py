@@ -12,6 +12,6 @@ class LayerTest(unittest.TestCase):
             self.fail(e)
 
     def setUp(self):
-        self.in_batch = hmarray(np.random.rand(256, 3, 256, 256))
-        self.actual = hmarray(np.random.rand(256, 3, 256, 256))
-        self.expected = hmarray(np.random.rand(256, 3, 256, 256))
+        self.in_batch = hmarray(np.random.rand(5, 3, 256, 256).astype(np.float32))
+        self.actual = hmarray(np.random.rand(5, 3, 256, 256).astype(np.float32))
+        self.expected = hmarray(np.random.rand(5, 3, 256, 256).astype(np.float32))
