@@ -206,8 +206,7 @@ class ConvLayer(BaseLayer):
                                   (self.stride, self.stride))
                 shape = col_data.shape
                 data = col_data.reshape((shape[0], np.prod(shape[1:])))
-                out = np.dot(weights, data)
-                top_data[:] = out[:]
+                np.dot(weights, data, top_data)
 
                 # for g in range(self.group):
                 #     if self.bias_term:
