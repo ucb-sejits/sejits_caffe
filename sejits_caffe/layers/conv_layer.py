@@ -1,16 +1,15 @@
 from .base_layer import BaseLayer
 from ctree.jit import LazySpecializedFunction, ConcreteSpecializedFunction
-from ctree.ocl import get_context_and_queue_from_devices
 from ctree.templates.nodes import StringTemplate
 from ctree.c.nodes import FunctionDecl, SymbolRef, CFile, Constant
-from ctree.ocl.nodes import OclFile
+# from ctree.ocl.nodes import OclFile
+# from ctree.ocl import get_context_and_queue_from_devices
 from ctree.nodes import Project
 import numpy as np
 import logging
-import pycl as cl
+# import pycl as cl
 import ctypes as ct
-from hindemith.types.hmarray import hmarray, empty, for_range
-from scipy.linalg.blas import dgemm
+from hindemith.types.hmarray import empty
 
 
 im2col_kernel = """
@@ -56,29 +55,30 @@ class Im2Col(LazySpecializedFunction):
     def args_to_subconfig(self, args):
         A = args[0]
         channels, height, width = args[1]
-        kernel_height, kernel_width = args[2]
-        padding_height, padding_width = args[3]
-        stride_height, stride_width = args[4]
+        kernel_h, kernel_w = args[2]
+        padding_h, padding_w = args[3]
+        stride_h, stride_w = args[4]
         return {
             'ptr': np.ctypeslib.ndpointer(A.dtype, A.ndim, A.shape),
             'channels': channels,
             'height': height,
             'width': width,
-            'kernel_height': kernel_height,
-            'kernel_width': kernel_width,
-            'padding_height': padding_height,
-            'padding_width': padding_width,
-            'stride_height': stride_height,
-            'stride_width': stride_width
+            'kernel_h': kernel_h,
+            'kernel_w': kernel_w,
+            'padding_h': padding_h,
+            'padding_w': padding_w,
+            'stride_h': stride_h,
+            'stride_w': stride_w
         }
 
     def transform(self, tree, program_cfg):
         arg_cfg, tune_cfg = program_cfg
-        height_col = (arg_cfg['height'] + 2 * arg_cfg['padding_height'] -
-                      arg_cfg['kernel_height']) / arg_cfg['stride_height'] + 1
-        width_col = (arg_cfg['width'] + 2 * arg_cfg['padding_width'] -
-                     arg_cfg['kernel_width']) / arg_cfg['stride_width'] + 1
-        out_shape = (arg_cfg['channels'] * arg_cfg['kernel_height'] * arg_cfg['kernel_width'], height_col, width_col)
+        height_col = (arg_cfg['height'] + 2 * arg_cfg['padding_h'] -
+                      arg_cfg['kernel_h']) / arg_cfg['stride_h'] + 1
+        width_col = (arg_cfg['width'] + 2 * arg_cfg['padding_w'] -
+                     arg_cfg['kernel_w']) / arg_cfg['stride_w'] + 1
+        out_shape = (arg_cfg['channels'] * arg_cfg['kernel_h'] *
+                     arg_cfg['kernel_w'], height_col, width_col)
         out_ptr = np.ctypeslib.ndpointer(arg_cfg['ptr']._dtype_, 3, out_shape)
         num_kernels = arg_cfg['channels'] * height_col * width_col
         loop_body = [StringTemplate(im2col_kernel, {
@@ -87,12 +87,12 @@ class Im2Col(LazySpecializedFunction):
             'channels': Constant(arg_cfg['channels']),
             'height': Constant(arg_cfg['height']),
             'width': Constant(arg_cfg['width']),
-            'kernel_h': Constant(arg_cfg['kernel_height']),
-            'kernel_w': Constant(arg_cfg['kernel_width']),
-            'pad_h': Constant(arg_cfg['padding_height']),
-            'pad_w': Constant(arg_cfg['padding_width']),
-            'stride_h': Constant(arg_cfg['stride_height']),
-            'stride_w': Constant(arg_cfg['stride_width']),
+            'kernel_h': Constant(arg_cfg['kernel_h']),
+            'kernel_w': Constant(arg_cfg['kernel_w']),
+            'pad_h': Constant(arg_cfg['padding_h']),
+            'pad_w': Constant(arg_cfg['padding_w']),
+            'stride_h': Constant(arg_cfg['stride_h']),
+            'stride_w': Constant(arg_cfg['stride_w']),
             'height_col': Constant(height_col),
             'width_col': Constant(width_col),
             })]
@@ -192,33 +192,23 @@ class ConvLayer(BaseLayer):
     def forward(self, bottom, top):
         blob = self.blobs[0]
         blob_length = np.prod(blob.shape)
-        weights = np.ndarray((self.M, self.channels * blob_length,), np.float32)
+        weight_shape = (self.M, self.channels * blob_length)
+        weights = np.ndarray(weight_shape, np.float32)
+        blob = blob.reshape(blob_length)
         for i in range(self.channels):
-            weights[..., i*blob_length:(i+1)*blob_length] = blob.reshape(blob_length)
+            weights[..., i*blob_length:(i+1)*blob_length] = blob
 
         for bottom_data, top_data in zip(bottom, top):
-            weight_offset = self.M * self.K
-            col_offset = self.K * self.N
-            top_offset = self.M * self.N
             for n in range(len(bottom_data)):
                 col_data = im2col(bottom_data, bottom_data.shape,
                                   (self.kernel_size, self.kernel_size),
                                   (self.padding, self.padding),
                                   (self.stride, self.stride))
-                # for g in range(self.group):
-                print("M: ", self.M)
-                print("N: ", self.N)
-                print("K: ", self.K)
-                print("col_data shape: ", col_data.shape)
-                print("weights shape: ", weights.shape)
                 shape = col_data.shape
                 data = col_data.reshape((shape[0], np.prod(shape[1:])))
-                print("data shape: ", data.shape)
-                print("top_data shape: ", top_data.shape)
-                print(weights)
                 out = np.dot(weights, data)
                 top_data[:] = out[:]
-                print(out)
 
-                    # if self.bias_term:
-                    #     np.dot(self.blobs[1], self.bias_multiplier, top_data)
+                # for g in range(self.group):
+                #     if self.bias_term:
+                #         np.dot(self.blobs[1], self.bias_multiplier, top_data)
