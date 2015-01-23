@@ -16,6 +16,7 @@ cd ..
 git clone https://github.com/ucb-sejits/pycl.git
 cd pycl
 python setup.py install
+cd ..
 git clone git@github.com:ucb-sejits/sejits_caffe.git
 cd sejits_caffe
 nosetests

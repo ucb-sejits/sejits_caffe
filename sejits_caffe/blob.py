@@ -14,7 +14,6 @@ class Blob(object):
         self.height = height
         self.width = width
         self.count = num * channels * height * width
-        print("Count", self.count)
         if self.count > self.capacity:
             self.capacity = self.count
             self.data = hmarray(self.capacity, np.float32)
