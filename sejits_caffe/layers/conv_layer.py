@@ -188,14 +188,12 @@ class ConvLayer(BaseLayer):
             self.blobs = [Blob(num_output, channels / group, kernel_size,
                                kernel_size)]
             self.blobs[0].fill(.1)
+            self.blobs[0].data = self.blobs[0].data.reshape((self.M, self.K))
             if bias_term is not None:
                 self.blobs.append(Blob(1, 1, 1, num_output))
                 self.blobs[1].fill(0)
 
     def forward(self, bottom, top):
-        blob = self.blobs[0]
-        weight_shape = (self.M, self.K)
-        blob = blob.data.reshape(weight_shape)
 
         for bottom_data, top_data in zip(bottom, top):
             for n in range(len(bottom_data)):
@@ -204,7 +202,10 @@ class ConvLayer(BaseLayer):
                                   (self.padding, self.padding),
                                   (self.stride, self.stride))
                 data = col_data.reshape((self.K, self.N))
-                top_data[:] = np.dot(blob, data)
+                # TODO: Weirdness in reshape method prevents us from doing dot
+                # directly into the output.  Should initialize the arrays with
+                # the right shape so we don't have to call reshape
+                top_data[:] = np.dot(self.blobs[0].data, data)
 
                 # for g in range(self.group):
                 #     if self.bias_term:
