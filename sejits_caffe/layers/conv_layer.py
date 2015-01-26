@@ -193,7 +193,6 @@ class ConvLayer(BaseLayer):
                 self.blobs[1].fill(0)
 
     def forward(self, bottom, top):
-
         weights = self.blobs[0].data.reshape((self.M, self.K))
         for bottom_data, top_data in zip(bottom, top):
             for n in range(len(bottom_data)):
@@ -202,11 +201,55 @@ class ConvLayer(BaseLayer):
                                   (self.padding, self.padding),
                                   (self.stride, self.stride))
                 data = col_data.reshape((self.K, self.N))
+
+                # TODO: Add support for group > 1
+                # for g in range(self.group):
+
                 # TODO: Weirdness in reshape method prevents us from doing dot
                 # directly into the output.  Should initialize the arrays with
                 # the right shape so we don't have to call reshape
                 top_data[:] = np.dot(weights, data)
 
-                # for g in range(self.group):
-                #     if self.bias_term:
-                #         np.dot(self.blobs[1], self.bias_multiplier, top_data)
+                if self.bias_term:
+                    top_data += self.blobs[1].data[:, np.newaxis]
+
+    def backward(self, top, propagate_down, bottom):
+        weight = None
+        weight_diff = None
+        if self.param_propagate_down[0]:
+            weight = self.blobs[0].data
+            weight_diff = self.blobs[0].diff
+            weight_diff[...] = 0
+
+        bias_diff = None
+        if self.bias_term and self.param_propagate_down[1]:
+            bias_diff = self.blobs[1].diff
+            bias_diff[...] = 0
+
+        for top_data, bottom_data, prop in zip(top, bottom, propagate_down):
+            top_diff = None
+            if self.bias_term and self.param_propagate_down[1]:
+                top_diff = top_data.diff
+                for n in range(self.num):
+                    bias_diff += top_diff
+
+            if self.param_propagate_down[0] or prop:
+                if not top_diff:
+                    top_diff = top_data.diff
+                for n in range(self.num):
+                    col_data = im2col(bottom_data, bottom_data.shape,
+                                      (self.kernel_size, self.kernel_size),
+                                      (self.padding, self.padding),
+                                      (self.stride, self.stride))
+                    top_data = top_data.reshape((self.M, self.K))
+                    data = col_data.reshape((self.K, self.N))
+                    if self.param_propagate_down[0]:
+                        weight += np.dot(top_data, data)
+
+                    if prop:
+                        if weight is None:
+                            weight = self.blobs[0].data
+                        weight = weight.reshape((self.M, self.K))
+                        top_data = top_data.reshape((self.K, self.N))
+                        col_data[:] = np.dot(weight, top_data)
+

@@ -15,7 +15,7 @@ def numpy_convolve(batch, weights, expected):
 
 
 class ConvLayerTest(LayerTest):
-    def test_simple(self):
+    def test_forward(self):
         height_out = (256 - 11) + 1
         width_out = (256 - 11) + 1
         self.actual = np.zeros((5, 25, height_out * width_out), np.float32)
