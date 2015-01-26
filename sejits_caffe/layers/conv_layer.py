@@ -9,6 +9,7 @@ import numpy as np
 import logging
 # import pycl as cl
 import ctypes as ct
+from ..blob import Blob
 from hindemith.types.hmarray import empty
 
 
@@ -128,8 +129,8 @@ im2col = Im2Col(None)
 
 
 class ConvLayer(BaseLayer):
-    def __init__(self, blobs, bottom, top, num_output, kernel_size, padding=0,
-                 stride=1, group=1, bias_term=True):
+    def __init__(self, bottom, top, num_output, kernel_size, blobs=None,
+                 padding=0, stride=1, group=1, bias_term=True):
         """
         :param int kernel_size:
         Square filter size
@@ -157,7 +158,6 @@ class ConvLayer(BaseLayer):
         :param bool bias_term: optional, default True.
         Whether to have a bias.
         """
-        self.blobs = blobs
         assert kernel_size > 0, "Filter dimensions cannot be zero."
         self.kernel_size = kernel_size
 
@@ -181,22 +181,21 @@ class ConvLayer(BaseLayer):
         self.N = self.height_out * self.width_out
 
         self.bias_term = bias_term
-        if len(self.blobs) > 0:
+        if blobs is not None:
+            self.blobs = blobs
             logging.debug("Skipping parameter initialization")
         else:
-            if bias_term:
-                self.blobs.resize(2)
-            else:
-                self.blobs.resize(1)
+            self.blobs = [Blob(num_output, channels / group, kernel_size,
+                               kernel_size)]
+            self.blobs[0].fill(.1)
+            if bias_term is not None:
+                self.blobs.append(Blob(1, 1, 1, num_output))
+                self.blobs[1].fill(0)
 
     def forward(self, bottom, top):
         blob = self.blobs[0]
-        blob_length = np.prod(blob.shape)
-        weight_shape = (self.M, self.channels * blob_length)
-        weights = np.ndarray(weight_shape, np.float32)
-        blob = blob.reshape(blob_length)
-        for i in range(self.channels):
-            weights[..., i*blob_length:(i+1)*blob_length] = blob
+        weight_shape = (self.M, self.K)
+        blob = blob.data.reshape(weight_shape)
 
         for bottom_data, top_data in zip(bottom, top):
             for n in range(len(bottom_data)):
@@ -204,9 +203,8 @@ class ConvLayer(BaseLayer):
                                   (self.kernel_size, self.kernel_size),
                                   (self.padding, self.padding),
                                   (self.stride, self.stride))
-                shape = col_data.shape
-                data = col_data.reshape((shape[0], np.prod(shape[1:])))
-                np.dot(weights, data, top_data)
+                data = col_data.reshape((self.K, self.N))
+                top_data[:] = np.dot(blob, data)
 
                 # for g in range(self.group):
                 #     if self.bias_term:
