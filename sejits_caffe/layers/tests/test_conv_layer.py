@@ -11,24 +11,11 @@ def numpy_convolve(batch, weights, expected):
         for n in range(25):
             for channel in range(batch.shape[1]):
                 expected[i][n] += convolve(batch[i][channel],
-                                           weights)[5:-5, 5:-5]
+                                           weights[n][channel])[5:-5, 5:-5]
 
 
 class ConvLayerTest(LayerTest):
     def test_simple(self):
-        weights = np.array([
-            [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1],
-            [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1],
-            [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1],
-            [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1],
-            [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1],
-            [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1],
-            [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1],
-            [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1],
-            [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1],
-            [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1],
-            [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1]
-        ], np.float32)
         height_out = (256 - 11) + 1
         width_out = (256 - 11) + 1
         self.actual = np.zeros((5, 25, height_out * width_out), np.float32)
@@ -36,5 +23,5 @@ class ConvLayerTest(LayerTest):
         conv = ConvLayer(self.in_batch, self.actual, 25, 11)
         conv.forward(self.in_batch, self.actual)
         self.actual = self.actual.reshape((5, 25, height_out, width_out))
-        numpy_convolve(self.in_batch, weights, self.expected)
+        numpy_convolve(self.in_batch, conv.blobs[0].data.reshape(25, 3, 11, 11), self.expected)
         self._check()
