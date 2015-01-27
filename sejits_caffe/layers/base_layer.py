@@ -1,6 +1,7 @@
 class BaseLayer(object):
     def __init__(self, param):
         self.layer_param = param
+        self.blobs = []
         # TODO:  Initialize with proto blob
 
     def forward(self, bottom, top):

@@ -129,66 +129,50 @@ im2col = Im2Col(None)
 
 
 class ConvLayer(BaseLayer):
-    def __init__(self, bottom, top, num_output, kernel_size, blobs=None,
-                 padding=0, stride=1, group=1, bias_term=True):
-        """
-        :param int kernel_size:
-        Square filter size
-        TODO: Support non square filters
+    def set_up(self, bottom, top):
+        conv_param = self.layer_param.convolution_param
 
-        :param int stride:
-        The filter stride, default a dense convolution of stride 1.
-        TODO: Suppport different strides in height and width direction
+        if conv_param.kernel_size:
+            self.kernel_h = conv_param.kernel_size
+            self.kernel_w = conv_param.kernel_size
+        else:
+            self.kernel_h = conv_param.kernel_h
+            self.kernel_w = conv_param.kernel_w
+        assert (self.kernel_h, self.kernel_w) > (0, 0), \
+            "Filter dimensions cannot be zero."
 
-        :param int pad:
-        The zero-padding for convolution
-        TODO: Support non symmetric padding
+        self.pad_h = conv_param.pad
+        self.pad_w = conv_param.pad
 
-        :param int group: optional, default 1.
-        The number of filter groups. Group convolution is a method
-        for reducing paramaterization by selectively connecting input
-        and output channels.  The input and outpuyt channel dimension
-        must be divisible by the number of groups. For group f >= 1,
-        the convolutional filters' input and output channels are
-        separated s.t. each group takes 1 / group of the input
-        channels 1-2 and output channels 1-4 into the first group and
-        input channels 3-4 and output channels 5-8 into the second
-        group.
+        self.stride_h = conv_param.stride
+        self.stride_w = conv_param.stride
 
-        :param bool bias_term: optional, default True.
-        Whether to have a bias.
-        """
-        assert kernel_size > 0, "Filter dimensions cannot be zero."
-        self.kernel_size = kernel_size
-
-        self.padding = padding
-        self.stride = stride
-
-        assert num_output > 0, "Layer must have at least one output"
+        assert conv_param.num_output > 0, "Layer must have at least one output"
 
         channels, height, width = bottom[0].shape
-        self.channels = channels
-        self.group = group
-        assert channels % group == 0, \
+        num_output = conv_param.num_output
+        self.group = conv_param.group
+        assert channels % self.group == 0, \
             "Number of channels should be a multiple of group."
-        assert num_output % group == 0, \
+        assert num_output % self.group == 0, \
             "Number of outputs should be a multiple of group."
 
-        self.M = num_output / group
-        self.K = channels * kernel_size * kernel_size / group
-        self.height_out = (height + 2 * padding - kernel_size) / stride + 1
-        self.width_out = (width + 2 * padding - kernel_size) / stride + 1
+        self.M = num_output / self.group
+        self.K = channels * self.kernel_h * self.kernel_w / self.group
+        self.height_out = (height + 2 * self.pad_h - self.kernel_h) / \
+            self.stride_h + 1
+        self.width_out = (width + 2 * self.pad_w - self.kernel_w) / \
+            self.stride_w + 1
         self.N = self.height_out * self.width_out
 
-        self.bias_term = bias_term
-        if blobs is not None:
-            self.blobs = blobs
+        self.bias_term = conv_param.bias_term
+        if len(self.blobs) > 0:
             logging.debug("Skipping parameter initialization")
         else:
-            self.blobs = [Blob(num_output, channels / group, kernel_size,
-                               kernel_size)]
+            self.blobs.append(Blob(num_output, channels / self.group,
+                                   self.kernel_h, self.kernel_w))
             self.blobs[0].fill(.1)
-            if bias_term is not None:
+            if self.bias_term:
                 self.blobs.append(Blob(1, 1, 1, num_output))
                 self.blobs[1].fill(0)
 
@@ -197,9 +181,9 @@ class ConvLayer(BaseLayer):
         for bottom_data, top_data in zip(bottom, top):
             for n in range(len(bottom_data)):
                 col_data = im2col(bottom_data, bottom_data.shape,
-                                  (self.kernel_size, self.kernel_size),
-                                  (self.padding, self.padding),
-                                  (self.stride, self.stride))
+                                  (self.kernel_h, self.kernel_w),
+                                  (self.pad_h, self.pad_w),
+                                  (self.stride_h, self.stride_w))
                 data = col_data.reshape((self.K, self.N))
 
                 # TODO: Add support for group > 1
