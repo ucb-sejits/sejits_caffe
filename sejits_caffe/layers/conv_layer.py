@@ -57,23 +57,22 @@ class ConvLayer(BaseLayer):
     def forward(self, bottom, top):
         weights = self.blobs[0].data.reshape((self.M, self.K))
         for bottom_data, top_data in zip(bottom, top):
-            for n in range(len(bottom_data)):
-                col_data = im2col(bottom_data, bottom_data.shape,
-                                  (self.kernel_h, self.kernel_w),
-                                  (self.pad_h, self.pad_w),
-                                  (self.stride_h, self.stride_w))
-                data = col_data.reshape((self.K, self.N))
+            col_data = im2col(bottom_data, bottom_data.shape,
+                              (self.kernel_h, self.kernel_w),
+                              (self.pad_h, self.pad_w),
+                              (self.stride_h, self.stride_w))
+            data = col_data.reshape((self.K, self.N))
 
-                # TODO: Add support for group > 1
-                # for g in range(self.group):
+            # TODO: Add support for group > 1
+            # for g in range(self.group):
 
-                # TODO: Weirdness in reshape method prevents us from doing dot
-                # directly into the output.  Should initialize the arrays with
-                # the right shape so we don't have to call reshape
-                top_data[:] = np.dot(weights, data)
+            # TODO: Weirdness in reshape method prevents us from doing dot
+            # directly into the output.  Should initialize the arrays with
+            # the right shape so we don't have to call reshape
+            top_data[:] = np.dot(weights, data)
 
-                if self.bias_term:
-                    top_data += self.blobs[1].data[:, np.newaxis]
+            if self.bias_term:
+                top_data += self.blobs[1].data[:, np.newaxis]
 
     def backward(self, top, propagate_down, bottom):
         weight = None
@@ -114,4 +113,3 @@ class ConvLayer(BaseLayer):
                         weight = weight.reshape((self.M, self.K))
                         top_data = top_data.reshape((self.K, self.N))
                         col_data[:] = np.dot(weight, top_data)
-
