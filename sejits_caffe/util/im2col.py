@@ -49,6 +49,10 @@ class CConcreteIm2Col(ConcreteSpecializedFunction):
 
 
 class Im2Col(LazySpecializedFunction):
+    def __init__(self, backend='c'):
+        super(Im2Col, self).__init__(None)
+        self.backend = backend
+
     def args_to_subconfig(self, args):
         A = args[0]
         channels, height, width = args[1]
@@ -78,47 +82,46 @@ class Im2Col(LazySpecializedFunction):
                      arg_cfg['kernel_w'], height_col, width_col)
         out_ptr = np.ctypeslib.ndpointer(arg_cfg['ptr']._dtype_, 3, out_shape)
         num_kernels = arg_cfg['channels'] * height_col * width_col
-        loop_body = [StringTemplate(im2col_kernel, {
-            'Dtype': SymbolRef('float'),
-            'num_kernels': Constant(num_kernels),
-            'channels': Constant(arg_cfg['channels']),
-            'height': Constant(arg_cfg['height']),
-            'width': Constant(arg_cfg['width']),
-            'kernel_h': Constant(arg_cfg['kernel_h']),
-            'kernel_w': Constant(arg_cfg['kernel_w']),
-            'pad_h': Constant(arg_cfg['padding_h']),
-            'pad_w': Constant(arg_cfg['padding_w']),
-            'stride_h': Constant(arg_cfg['stride_h']),
-            'stride_w': Constant(arg_cfg['stride_w']),
-            'height_col': Constant(height_col),
-            'width_col': Constant(width_col),
-            })]
+        if self.backend == 'c':
+            loop_body = [StringTemplate(im2col_kernel, {
+                'Dtype': SymbolRef('float'),
+                'num_kernels': Constant(num_kernels),
+                'channels': Constant(arg_cfg['channels']),
+                'height': Constant(arg_cfg['height']),
+                'width': Constant(arg_cfg['width']),
+                'kernel_h': Constant(arg_cfg['kernel_h']),
+                'kernel_w': Constant(arg_cfg['kernel_w']),
+                'pad_h': Constant(arg_cfg['padding_h']),
+                'pad_w': Constant(arg_cfg['padding_w']),
+                'stride_h': Constant(arg_cfg['stride_h']),
+                'stride_w': Constant(arg_cfg['stride_w']),
+                'height_col': Constant(height_col),
+                'width_col': Constant(width_col),
+                })]
 
-        func = FunctionDecl(
-            None,
-            SymbolRef('im2col'),
-            [SymbolRef("data_im", arg_cfg['ptr']()),
-             SymbolRef("data_col", out_ptr())],
-            []
-        )
-        proj = Project([CFile('im2col', [func])])
-        # proj.files[0].body.insert(0, StringTemplate("""
-        #     #ifdef __APPLE__
-        #     #include <OpenCL/opencl.h>
-        #     #else
-        #     #include <CL/cl.h>
-        #     #endif
-        #     """) )
-        # arg_types = (cl.cl_command_queue, cl.cl_kernel, cl.cl_mem, cl.cl_mem)
-        # shape = [arg_cfg['channels'], height_col, width_col]
-        func.defn = [loop_body]
-        entry_type = (None, arg_cfg['ptr'], out_ptr)
-        return 'im2col', proj, entry_type
+            func = FunctionDecl(
+                None,
+                SymbolRef('im2col'),
+                [SymbolRef("data_im", arg_cfg['ptr']()),
+                 SymbolRef("data_col", out_ptr())],
+                []
+            )
+            proj = Project([CFile('im2col', [func])])
+            func.defn = [loop_body]
+            entry_type = (None, arg_cfg['ptr'], out_ptr)
+            return 'im2col', proj, entry_type
+            # proj.files[0].body.insert(0, StringTemplate("""
+            #     #ifdef __APPLE__
+            #     #include <OpenCL/opencl.h>
+            #     #else
+            #     #include <CL/cl.h>
+            #     #endif
+            #     """) )
+            # arg_types = (cl.cl_command_queue, cl.cl_kernel, cl.cl_mem, cl.cl_mem)
+            # shape = [arg_cfg['channels'], height_col, width_col]
 
     def finalize(self, entry_name, proj, entry_type):
-        entry_type = ct.CFUNCTYPE(*entry_type)
-        fn = CConcreteIm2Col(entry_name, proj, entry_type)
-        return fn
-
-
-im2col = Im2Col(None)
+        if self.backend == 'c':
+            entry_type = ct.CFUNCTYPE(*entry_type)
+            fn = CConcreteIm2Col(entry_name, proj, entry_type)
+            return fn

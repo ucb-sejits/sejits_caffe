@@ -1,5 +1,5 @@
 import unittest
-from sejits_caffe.util.im2col import im2col
+from sejits_caffe.util.im2col import Im2Col
 from hindemith.types.hmarray import hmarray
 import numpy as np
 
@@ -38,6 +38,7 @@ class TestIm2Col(unittest.TestCase):
         self.stride = 1
 
     def test_c(self):
+        im2col = Im2Col('c')
         actual = im2col(self.a, self.a.shape, (11, 11),
                         (0, 0), (1, 1))
         expected = py_im2col(self.a, 11, 0, 1)
