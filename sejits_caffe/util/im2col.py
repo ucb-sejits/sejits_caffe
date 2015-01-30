@@ -220,3 +220,5 @@ class Im2Col(LazySpecializedFunction):
             program = cl.clCreateProgramWithSource(
                 fn.context, kernel.codegen()).build()
             return fn.finalize(program[kernel.body[0].name.name])
+
+im2col = Im2Col()

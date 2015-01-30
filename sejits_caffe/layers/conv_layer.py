@@ -1,8 +1,8 @@
-from sejits_caffe.layers.base_layer import BaseLayer
+from base_layer import BaseLayer
 import numpy as np
 import logging
 # import pycl as cl
-from sejite_caffe.blob import Blob
+from sejits_caffe.blob import Blob
 from sejits_caffe.util.im2col import im2col
 
 
