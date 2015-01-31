@@ -6,7 +6,7 @@ import numpy as np
 import sejits_caffe.caffe_pb2 as caffe_pb2
 from google.protobuf import text_format
 import os
-# from hindemith.types.hmarray import hmarray
+from hindemith.types.hmarray import hmarray
 
 
 def numpy_convolve(batch, weights, expected):
@@ -21,7 +21,7 @@ class ConvLayerTest(LayerTest):
     def test_forward(self):
         height_out = (256 - 11) + 1
         width_out = (256 - 11) + 1
-        self.actual = np.zeros((5, 25, height_out * width_out), np.float32)
+        self.actual = hmarray(np.zeros((5, 25, height_out * width_out), np.float32))
         self.expected = np.zeros((5, 25, height_out, width_out), np.float32)
 
         path = os.path.dirname(os.path.realpath(__file__))

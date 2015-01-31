@@ -1,6 +1,0 @@
-setup.py
-sejits_caffe.egg-info/PKG-INFO
-sejits_caffe.egg-info/SOURCES.txt
-sejits_caffe.egg-info/dependency_links.txt
-sejits_caffe.egg-info/requires.txt
-sejits_caffe.egg-info/top_level.txt
