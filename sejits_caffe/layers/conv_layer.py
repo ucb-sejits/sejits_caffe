@@ -1,9 +1,8 @@
 from base_layer import BaseLayer
 import numpy as np
 import logging
-# import pycl as cl
-from sejits_caffe.blob import Blob
 from sejits_caffe.util.im2col import im2col
+from hindemith import hmarray
 
 
 class ConvLayer(BaseLayer):
@@ -44,18 +43,16 @@ class ConvLayer(BaseLayer):
         self.N = self.height_out * self.width_out
 
         self.bias_term = conv_param.bias_term
-        if len(self.blobs) > 0:
+        if hasattr(self, 'weights'):
             logging.debug("Skipping parameter initialization")
         else:
-            self.blobs.append(Blob(num_output, channels / self.group,
-                                   self.kernel_h, self.kernel_w))
-            self.blobs[0].fill(.1)
+            self.weights = hmarray((self.M, self.K))
+            self.weights.fill(.1)
             if self.bias_term:
-                self.blobs.append(Blob(1, 1, 1, num_output))
-                self.blobs[1].fill(0)
+                self.bias = np.ndarray((num_output, ))
+                self.bias.fill(0)
 
     def forward(self, bottom, top):
-        weights = self.blobs[0].data.reshape((self.M, self.K))
         for bottom_data, top_data in zip(bottom, top):
             col_data = im2col(bottom_data, bottom_data.shape,
                               (self.kernel_h, self.kernel_w),
@@ -69,10 +66,10 @@ class ConvLayer(BaseLayer):
             # TODO: Weirdness in reshape method prevents us from doing dot
             # directly into the output.  Should initialize the arrays with
             # the right shape so we don't have to call reshape
-            top_data[:] = np.dot(weights, data)
+            top_data[:] = np.dot(self.weights, data)
 
             if self.bias_term:
-                top_data += self.blobs[1].data[:, np.newaxis]
+                top_data += self.bias[:, np.newaxis]
 
     def backward(self, top, propagate_down, bottom):
         weight = None

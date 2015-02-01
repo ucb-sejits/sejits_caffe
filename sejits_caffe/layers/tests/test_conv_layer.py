@@ -1,4 +1,4 @@
-from .base_layer_test import LayerTest
+from base_layer_test import LayerTest
 
 from sejits_caffe.layers.conv_layer import ConvLayer
 from scipy.ndimage.filters import convolve
@@ -32,6 +32,6 @@ class ConvLayerTest(LayerTest):
         conv.set_up(self.in_batch, self.actual)
         conv.forward(self.in_batch, self.actual)
         self.actual = self.actual.reshape((5, 25, height_out, width_out))
-        new_weights = conv.blobs[0].data.reshape(25, 3, 11, 11)
+        new_weights = conv.weights.reshape(25, 3, 11, 11)
         numpy_convolve(self.in_batch, new_weights, self.expected)
         self._check()

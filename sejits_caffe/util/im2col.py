@@ -135,7 +135,7 @@ class Im2Col(LazySpecializedFunction):
                      arg_cfg['kernel_w'], height_col, width_col)
         out_ptr = np.ctypeslib.ndpointer(arg_cfg['ptr']._dtype_, 3, out_shape)
         if self.backend == 'c':
-            loop_body = [StringTemplate(im2col_kernel, {
+            loop_body = [StringTemplate(im2col_c, {
                 'Dtype': SymbolRef('float'),
                 'channels': Constant(arg_cfg['channels']),
                 'height': Constant(arg_cfg['height']),
