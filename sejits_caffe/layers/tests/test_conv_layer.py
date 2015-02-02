@@ -21,7 +21,8 @@ class ConvLayerTest(LayerTest):
     def test_forward(self):
         height_out = (256 - 11) + 1
         width_out = (256 - 11) + 1
-        self.actual = hmarray(np.zeros((5, 25, height_out * width_out), np.float32))
+        self.actual = hmarray(np.zeros((5, 25, height_out * width_out),
+                              np.float32))
         self.expected = np.zeros((5, 25, height_out, width_out), np.float32)
 
         path = os.path.dirname(os.path.realpath(__file__))

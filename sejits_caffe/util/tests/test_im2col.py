@@ -32,7 +32,8 @@ class TestIm2Col(unittest.TestCase):
     def setUp(self):
         height = 64
         width = 64
-        self.a = hmarray((3, height, width), dtype=np.float32)
+        self.a = hmarray(np.random.rand(3, height, width) * 100).astype(np.float32)
+        # self.a = hmarray((np.arange(3 * height * width).reshape(3, height, width) * 100).astype(np.float32))
         self.kernel_size = 11
         self.pad = 0
         self.stride = 1
@@ -49,5 +50,5 @@ class TestIm2Col(unittest.TestCase):
         actual = im2col(self.a, self.a.shape, (11, 11),
                         (0, 0), (1, 1))
         expected = py_im2col(self.a, 11, 0, 1)
+        actual.copy_to_host_if_dirty()
         np.testing.assert_allclose(actual, expected)
-        
