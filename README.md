@@ -9,6 +9,8 @@ brew tap homebrew/versions
 brew install llvm33
 ```
 Update your `~/.ctree.cfg` to include
+
+```
 [c]
 CC = clang-3.3
 CFLAGS = -O3 -stdlib=libstdc++ -mmacosx-version-min=10.6
