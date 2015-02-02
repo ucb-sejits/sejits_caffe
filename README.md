@@ -2,7 +2,6 @@
 SEJITS port of the caffe framework
 
 # Install
-## OSX
 ```shell
 conda install llvm llvmpy nose numpy
 pip install -r requirements
