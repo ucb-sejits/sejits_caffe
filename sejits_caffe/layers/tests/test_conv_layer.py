@@ -18,7 +18,27 @@ def numpy_convolve(batch, weights, expected):
 
 
 class ConvLayerTest(LayerTest):
-    def test_forward(self):
+    def test_cpu_forward(self):
+        height_out = (256 - 11) + 1
+        width_out = (256 - 11) + 1
+        self.actual = hmarray(np.zeros((5, 25, height_out * width_out),
+                              np.float32))
+        self.expected = np.zeros((5, 25, height_out, width_out), np.float32)
+
+        path = os.path.dirname(os.path.realpath(__file__))
+        param = caffe_pb2.NetParameter()
+        param_string = open(path + '/test.prototxt').read()
+        text_format.Merge(param_string, param)
+        conv = ConvLayer(param.layers[0])
+        conv.backend = 'cpu'
+        conv.set_up(self.in_batch, self.actual)
+        conv.forward(self.in_batch, self.actual)
+        self.actual = self.actual.reshape((5, 25, height_out, width_out))
+        new_weights = conv.weights.reshape(25, 3, 11, 11)
+        numpy_convolve(self.in_batch, new_weights, self.expected)
+        self._check()
+
+    def test_gpu_forward(self):
         height_out = (256 - 11) + 1
         width_out = (256 - 11) + 1
         self.actual = hmarray(np.zeros((5, 25, height_out * width_out),
@@ -31,7 +51,7 @@ class ConvLayerTest(LayerTest):
         text_format.Merge(param_string, param)
         conv = ConvLayer(param.layers[0])
         conv.set_up(self.in_batch, self.actual)
-        conv.forward(self.in_batch, self.actual)
+        conv.forward(hmarray(self.in_batch), self.actual)
         self.actual = self.actual.reshape((5, 25, height_out, width_out))
         new_weights = conv.weights.reshape(25, 3, 11, 11)
         numpy_convolve(self.in_batch, new_weights, self.expected)

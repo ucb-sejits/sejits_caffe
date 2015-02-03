@@ -2,3 +2,4 @@ sejits_caffe
 ctree
 hindemith
 pycl
+pyviennacl
