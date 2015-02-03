@@ -33,19 +33,26 @@ im2col_c = """
 """
 
 im2col_ocl = """
-  int c = get_global_id(0);
-  int h = get_global_id(1);
-  int w = get_global_id(2);
-  int w_offset = c % $kernel_w;
-  int h_offset = (c / $kernel_w) % $kernel_h;
-  int c_im = c / $kernel_h / $kernel_w;
-  int h_pad = h * $stride_h - $pad_h + h_offset;
-  int w_pad = w * $stride_w - $pad_w + w_offset;
-  if (h_pad >= 0 && h_pad < $height && w_pad >= 0 && w_pad < $width)
-    data_col[(c * $height_col + h) * $width_col + w] =
-      data_im[(c_im * $height + h_pad) * $width + w_pad];
-  else
-    data_col[(c * $height_col + h) * $width_col + w] = 0;
+  int w_out = loop_idx % $width_col;
+  int h_index = loop_idx / $width_col;
+  int h_out = h_index % $height_col;
+  int channel_in = h_index / $height_col;
+  int channel_out = channel_in * $kernel_h * $kernel_w;
+  int h_in = h_out * $stride_h - $pad_h;
+  int w_in = w_out * $stride_w - $pad_w;
+  __global $Dtype* data_col_ptr = data_col;
+  data_col_ptr += (channel_out * $height_col + h_out) * $width_col + w_out;
+  __global $Dtype* data_im_ptr = data_im;
+  data_im_ptr += (channel_in * $height + h_in) * $width + w_in;
+  for (int i = 0; i < $kernel_h; ++i) {
+    for (int j = 0; j < $kernel_w; ++j) {
+      int h = h_in + i;
+      int w = w_in + j;
+      *data_col_ptr = (h >= 0 && w >= 0 && h < $height && w < $width) ?
+          data_im_ptr[i * $width + j] : 0;
+      data_col_ptr += $height_col * $width_col;
+    }
+  }
 """
 
 
@@ -88,7 +95,7 @@ class OclConcreteIm2Col(ConcreteSpecializedFunction):
         w_out = (w + 2 * padding_w - kernel_w) / stride_w + 1
         out_shape = (channels * kernel_h * kernel_w, h_out, w_out)
         output = empty(out_shape, np.float32)
-        output.host_dirty = True
+        output._host_dirty = True
         self._c_function(self.queue, self.kernel, args[0].ocl_buf,
                          output.ocl_buf)
         return output
@@ -172,7 +179,7 @@ class Im2Col(LazySpecializedFunction):
                 'height_col': Constant(height_col),
                 'width_col': Constant(width_col),
                 })]
-            shape = channels_col, height_col, width_col
+            shape = (arg_cfg['channels'] * height_col * width_col,)
             params = [SymbolRef("data_im", arg_cfg['ptr']()),
                       SymbolRef("data_col", out_ptr())]
             control, kernel = kernel_range(shape, shape, params, loop_body)

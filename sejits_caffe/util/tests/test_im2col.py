@@ -32,8 +32,11 @@ class TestIm2Col(unittest.TestCase):
     def setUp(self):
         height = 64
         width = 64
-        self.a = hmarray(np.random.rand(3, height, width) * 100).astype(np.float32)
-        # self.a = hmarray((np.arange(3 * height * width).reshape(3, height, width) * 100).astype(np.float32))
+        self.a = hmarray(
+            np.random.rand(3, height, width) * 100).astype(np.float32)
+        # self.a = hmarray(
+        #     (np.arange(3 * height * width).reshape(
+        #         3, height, width) * 100).astype(np.float32))
         self.kernel_size = 11
         self.pad = 0
         self.stride = 1
