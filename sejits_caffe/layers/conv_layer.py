@@ -3,7 +3,8 @@ import numpy as np
 import logging
 from sejits_caffe.util.im2col import cpu_im2col, gpu_im2col
 from hindemith import hmarray
-import ctypes as ct
+from hindemith.operations.gemm import gemm
+# import ctypes as ct
 
 
 class ConvLayer(BaseLayer):
@@ -49,8 +50,9 @@ class ConvLayer(BaseLayer):
         if hasattr(self, 'weights'):
             logging.debug("Skipping parameter initialization")
         else:
-            self.weights = hmarray((self.M, self.K))
+            self.weights = hmarray((self.M, self.K), np.float32)
             self.weights.fill(.1)
+            self.weights._ocl_dirty = True
             if self.bias_term:
                 self.bias = np.ndarray((num_output, ))
                 self.bias.fill(0)
@@ -85,11 +87,10 @@ class ConvLayer(BaseLayer):
             # TODO: Add support for group > 1
             # for g in range(self.group):
 
-            # TODO: Weirdness in reshape method prevents us from doing dot
-            # directly into the output.  Should initialize the arrays with
-            # the right shape so we don't have to call reshape
-            data.copy_to_host_if_dirty()
-            top_data[:] = np.dot(self.weights, data)
+            output = hmarray(np.zeros_like(top_data))
+            gemm(self.weights, data, output, 1.0, 0.0)
+            output.copy_to_host_if_dirty()
+            top_data[:] = output
 
             if self.bias_term:
                 top_data += self.bias[:, np.newaxis]
