@@ -63,15 +63,13 @@ class ConvLayer(BaseLayer):
                                   (self.kernel_h, self.kernel_w),
                                   (self.pad_h, self.pad_w),
                                   (self.stride_h, self.stride_w))
-            data = col_data.reshape((self.K, self.N))
-
             # TODO: Add support for group > 1
             # for g in range(self.group):
 
             # TODO: Weirdness in reshape method prevents us from doing dot
             # directly into the output.  Should initialize the arrays with
             # the right shape so we don't have to call reshape
-            top_data[:] = np.dot(self.weights, data)
+            top_data[:] = np.dot(self.weights, col_data)
 
             if self.bias_term:
                 top_data += self.bias[:, np.newaxis]
@@ -82,13 +80,12 @@ class ConvLayer(BaseLayer):
                                   (self.kernel_h, self.kernel_w),
                                   (self.pad_h, self.pad_w),
                                   (self.stride_h, self.stride_w))
-            data = col_data.reshape((self.K, self.N))
 
             # TODO: Add support for group > 1
             # for g in range(self.group):
 
             output = hmarray(np.zeros_like(top_data))
-            gemm(self.weights, data, output, 1.0, 0.0)
+            gemm(self.weights, col_data, output, 1.0, 0.0)
             output.copy_to_host_if_dirty()
             top_data[:] = output
 

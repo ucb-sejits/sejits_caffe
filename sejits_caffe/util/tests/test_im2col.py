@@ -8,7 +8,7 @@ def py_im2col(a, kernel_size, pad, stride):
     h_out = (a.shape[1] + 2 * pad - kernel_size) / stride + 1
     w_out = (a.shape[2] + 2 * pad - kernel_size) / stride + 1
     out_shape = (3 * kernel_size * kernel_size,
-                 h_out, w_out)
+                 h_out * w_out)
     out = np.ndarray(out_shape, np.float32)
     height_col = (a.shape[1] + 2 * pad - kernel_size) / stride + 1
     channels_col = kernel_size * kernel_size * a.shape[0]
@@ -22,9 +22,9 @@ def py_im2col(a, kernel_size, pad, stride):
                 w_pad = w * stride - pad + w_offset
                 if h_pad >= 0 and h_pad < a.shape[1] and \
                    w_pad >= 0 and w_pad < a.shape[2]:
-                    out[c, h, w] = a[c_im, h_pad, w_pad]
+                    out[c, h * height_col + w] = a[c_im, h_pad, w_pad]
                 else:
-                    out[c, h, w] = 0
+                    out[c, h * height_col + w] = 0
     return out
 
 
