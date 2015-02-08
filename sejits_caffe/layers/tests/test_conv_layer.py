@@ -35,30 +35,22 @@ class ConvLayerTest(LayerTest):
         except AssertionError as e:
             self.fail(e)
 
-    def test_cpu_forward(self):
+    def forward_test(self, backend):
         conv = ConvLayer(param.layers[0])
-        conv.backend = 'cpu'
+        conv.backend = backend
         actual = hmarray(np.zeros(actual_shape, np.float32))
         expected = np.zeros(expected_shape, np.float32)
         in_batch = np.random.rand(5, 3, 256, 256).astype(np.float32) * 255
 
-        conv.set_up(in_batch, actual)
-        conv.forward(in_batch, actual)
+        conv.set_up(hmarray(in_batch), actual)
+        conv.forward(hmarray(in_batch), actual)
         actual = actual.reshape((5, 25, height_out, width_out))
         new_weights = conv.weights.reshape(25, 3, 11, 11)
         numpy_convolve(in_batch, new_weights, expected)
         self._check(actual, expected)
 
+    def test_cpu_forward(self):
+        self.forward_test('cpu')
+
     def test_gpu_forward(self):
-        conv = ConvLayer(param.layers[0])
-        conv.backend = 'gpu'
-        in_batch = np.random.rand(5, 3, 256, 256).astype(np.float32) * 255
-        actual = hmarray(np.zeros(actual_shape, np.float32))
-        expected = np.zeros(expected_shape, np.float32)
-        conv.set_up(in_batch, actual)
-        conv.forward(hmarray(in_batch), actual)
-        actual = actual.reshape((5, 25, height_out, width_out))
-        new_weights = conv.weights.reshape(25, 3, conv_param.kernel_size,
-                                           conv_param.kernel_size)
-        numpy_convolve(in_batch, new_weights, expected)
-        self._check(actual, expected)
+        self.forward_test('gpu')
