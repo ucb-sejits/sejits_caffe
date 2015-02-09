@@ -1,6 +1,8 @@
 # sejits_caffe
 SEJITS port of the caffe framework
 
+[![Build Status](https://travis-ci.org/ucb-sejits/sejits_caffe.svg)](https://travis-ci.org/ucb-sejits/sejits_caffe)
+
 # Install
 Install llvm 3.3
 ## For OSX
