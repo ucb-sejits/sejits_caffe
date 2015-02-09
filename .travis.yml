@@ -23,3 +23,5 @@ install:
   - pip install -e git://github.com/ucb-sejits/hindemith.git#egg=stencil_code
 script:
   - nosetests --verbose --with-coverage --cover-package=sejits_caffe --cover-erase
+after_success:
+  - coveralls
