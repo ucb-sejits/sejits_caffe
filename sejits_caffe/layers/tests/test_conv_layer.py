@@ -1,5 +1,3 @@
-from .base_layer_test import LayerTest
-
 from sejits_caffe.layers.conv_layer import ConvLayer
 from scipy.ndimage.filters import convolve
 import numpy as np
@@ -7,6 +5,7 @@ import sejits_caffe.caffe_pb2 as caffe_pb2
 from google.protobuf import text_format
 import os
 from hindemith.types.hmarray import hmarray
+import unittest
 
 
 def numpy_convolve(batch, weights, expected):
@@ -28,7 +27,7 @@ actual_shape = (5, conv_param.num_output, height_out * width_out)
 expected_shape = (5, conv_param.num_output, height_out, width_out)
 
 
-class ConvLayerTest(LayerTest):
+class ConvLayerTest(unittest.TestCase):
     def _check(self, actual, expected):
         try:
             np.testing.assert_allclose(actual, expected, rtol=1e-04)
