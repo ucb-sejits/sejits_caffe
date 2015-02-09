@@ -35,7 +35,7 @@ class ConvLayerTest(LayerTest):
         except AssertionError as e:
             self.fail(e)
 
-    def forward_test(self, backend):
+    def _forward_test(self, backend):
         conv = ConvLayer(param.layers[0])
         conv.backend = backend
         actual = hmarray(np.zeros(actual_shape, np.float32))
@@ -50,7 +50,7 @@ class ConvLayerTest(LayerTest):
         self._check(actual, expected)
 
     def test_cpu_forward(self):
-        self.forward_test('cpu')
+        self._forward_test('cpu')
 
     def test_gpu_forward(self):
-        self.forward_test('gpu')
+        self._forward_test('gpu')
