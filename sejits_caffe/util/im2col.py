@@ -130,9 +130,9 @@ class Im2Col(LazySpecializedFunction):
         channels_col = arg_cfg['channels'] * arg_cfg['kernel_h'] * \
             arg_cfg['kernel_w']
         height_col = (arg_cfg['height'] + 2 * arg_cfg['padding_h'] -
-                      arg_cfg['kernel_h']) / arg_cfg['stride_h'] + 1
+                      arg_cfg['kernel_h']) // arg_cfg['stride_h'] + 1
         width_col = (arg_cfg['width'] + 2 * arg_cfg['padding_w'] -
-                     arg_cfg['kernel_w']) / arg_cfg['stride_w'] + 1
+                     arg_cfg['kernel_w']) // arg_cfg['stride_w'] + 1
         out_shape = (arg_cfg['channels'] * arg_cfg['kernel_h'] *
                      arg_cfg['kernel_w'], height_col * width_col)
         out_ptr = np.ctypeslib.ndpointer(arg_cfg['ptr']._dtype_, 2, out_shape)

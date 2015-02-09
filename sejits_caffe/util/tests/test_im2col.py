@@ -5,12 +5,12 @@ import numpy as np
 
 
 def py_im2col(a, kernel_size, pad, stride):
-    h_out = (a.shape[1] + 2 * pad - kernel_size) / stride + 1
-    w_out = (a.shape[2] + 2 * pad - kernel_size) / stride + 1
+    h_out = (a.shape[1] + 2 * pad - kernel_size) // stride + 1
+    w_out = (a.shape[2] + 2 * pad - kernel_size) // stride + 1
     out_shape = (3 * kernel_size * kernel_size,
                  h_out * w_out)
     out = np.ndarray(out_shape, np.float32)
-    height_col = (a.shape[1] + 2 * pad - kernel_size) / stride + 1
+    height_col = (a.shape[1] + 2 * pad - kernel_size) // stride + 1
     channels_col = kernel_size * kernel_size * a.shape[0]
     for c in range(channels_col):
         w_offset = c % kernel_size

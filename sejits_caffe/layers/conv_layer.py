@@ -1,4 +1,4 @@
-from base_layer import BaseLayer
+from .base_layer import BaseLayer
 import numpy as np
 import logging
 from sejits_caffe.util.im2col import cpu_im2col, gpu_im2col

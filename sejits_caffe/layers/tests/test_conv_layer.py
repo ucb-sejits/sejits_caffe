@@ -1,4 +1,4 @@
-from base_layer_test import LayerTest
+from .base_layer_test import LayerTest
 
 from sejits_caffe.layers.conv_layer import ConvLayer
 from scipy.ndimage.filters import convolve
