@@ -66,9 +66,6 @@ class ConvLayer(BaseLayer):
             # TODO: Add support for group > 1
             # for g in range(self.group):
 
-            # TODO: Weirdness in reshape method prevents us from doing dot
-            # directly into the output.  Should initialize the arrays with
-            # the right shape so we don't have to call reshape
             np.dot(self.weights, col_data, top_data)
 
             if self.bias_term:
