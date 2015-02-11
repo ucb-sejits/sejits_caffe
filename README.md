@@ -8,13 +8,29 @@ SEJITS port of the caffe framework
 # Install
 Install llvm 3.5
 
+We recommend virtualenvwrapper.
+
+Setup virtualenvwrapper.
+```shell
+$ pip install virtualenvwrapper
+...
+$ export WORKON_HOME=~/.envs
+$ mkdir -p $WORKON_HOME
+$ source /usr/local/bin/virtualenvwrapper.sh
+```
+
+Also add the following to your shell startup file.
+```shell
+export WORKON_HOME=~/.envs
+source /usr/local/bin/virtualenvwrapper.sh
+```
+
 ```shell
 $ git clone git@github.com:ucb-sejits/sejits_caffe.git
 $ cd sejits_caffe
-$ virtualenv venv
-$ source venv/bin/activate
+$ mkvirtualenv sejits_caffe
 $ pip install nose
-$ source venv/bin/activate  # have to do this twice to get nosetests in your path
+$ workon sejits_caffe  # have to do this to get nosetests in your path
 $ export LLVM_CONFIG=llvm-config-3.5  # If your llvm-config for LLVM 3.5 has a special name
 $ pip install -r requirements.txt
 $ nosetests
@@ -27,7 +43,7 @@ OK
 
 To develop, remember to
 ```shell
-$ source venv/bin/activate
+$ workon sejits_caffe
 ```
 
 when finished
