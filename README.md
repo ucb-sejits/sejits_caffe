@@ -8,7 +8,7 @@ SEJITS port of the caffe framework
 # Install
 Install llvm 3.5
 
-```
+```shell
 $ git clone git@github.com:ucb-sejits/sejits_caffe.git
 $ cd sejits_caffe
 $ virtualenv venv
@@ -23,4 +23,14 @@ $ nosetests
 Ran 5 tests in 14.763s
 
 OK
+```
+
+To develop, remember to
+```shell
+$ source venv/bin/activate
+```
+
+when finished
+```shell
+$ deactivate
 ```
