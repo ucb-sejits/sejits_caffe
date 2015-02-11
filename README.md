@@ -6,30 +6,21 @@ SEJITS port of the caffe framework
 
 
 # Install
-Install llvm 3.3
-## For OSX
-```shell
-brew tap homebrew/versions
-brew install llvm33
-```
-Update your `~/.ctree.cfg` to include
+Install llvm 3.5
 
 ```
-[c]
-CC = clang-3.3
-CFLAGS = -O3 -stdlib=libstdc++ -mmacosx-version-min=10.6
+$ git clone git@github.com:ucb-sejits/sejits_caffe.git
+$ cd sejits_caffe
+$ virtualenv venv
+$ source venv/bin/activate
+$ pip install nose
+$ source venv/bin/activate  # have to do this twice to get nosetests in your path
+$ export LLVM_CONFIG=llvm-config-3.5  # If your llvm-config for LLVM 3.5 has a special name
+$ pip install -r requirements.txt
+$ nosetests
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 14.763s
 
-[opencl]
-CC = clang-3.3
-CFLAGS = -O3 -stdlib=libstdc++ -mmacosx-version-min=10.6
-```
-
-## Conda
-Install requirements and try tests.
-```shell
-conda install llvm llvmpy nose numpy
-pip install -r requirements.txt
-git clone git@github.com:ucb-sejits/sejits_caffe.git
-cd sejits_caffe
-nosetests
+OK
 ```
