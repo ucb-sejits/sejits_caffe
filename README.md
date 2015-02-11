@@ -19,7 +19,7 @@ $ mkdir -p $WORKON_HOME
 $ source /usr/local/bin/virtualenvwrapper.sh
 ```
 
-Also add the following to your shell startup file.
+Also add the following to your shell startup file. (like .bashrc or .zshrc)
 ```shell
 export WORKON_HOME=~/.envs
 source /usr/local/bin/virtualenvwrapper.sh
