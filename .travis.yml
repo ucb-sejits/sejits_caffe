@@ -8,7 +8,7 @@ before_install:
   - sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers libprotobuf-dev python-scipy
 install:
   - pip install coveralls coverage nose
-  - pip install -r requirements.txt
+  - pip install --pre -r requirements.txt
 script:
   - nosetests --verbose --with-coverage --cover-package=sejits_caffe --cover-erase
 after_success:
