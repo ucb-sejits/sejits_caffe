@@ -101,9 +101,12 @@ class OclConcreteIm2Col(ConcreteSpecializedFunction):
         return output
 
 
+import ast
+
+
 class Im2Col(LazySpecializedFunction):
     def __init__(self, backend='c'):
-        super(Im2Col, self).__init__(None)
+        super(Im2Col, self).__init__(ast.Module())
         self.backend = backend
 
     def args_to_subconfig(self, args):
@@ -122,7 +125,8 @@ class Im2Col(LazySpecializedFunction):
             'padding_h': padding_h,
             'padding_w': padding_w,
             'stride_h': stride_h,
-            'stride_w': stride_w
+            'stride_w': stride_w,
+            'backend': self.backend
         }
 
     def transform(self, tree, program_cfg):
@@ -161,7 +165,7 @@ class Im2Col(LazySpecializedFunction):
                 []
             )
             proj = Project([CFile('im2col', [func])])
-            func.defn = [loop_body]
+            func.defn = loop_body
             entry_type = (None, arg_cfg['ptr'], out_ptr)
         elif self.backend == 'ocl':
             loop_body = [StringTemplate(im2col_ocl, {
@@ -194,6 +198,7 @@ class Im2Col(LazySpecializedFunction):
             func.params.insert(1, SymbolRef(kernel.body[0].name.name,
                                             cl.cl_kernel()))
             proj = Project([CFile('im2col', [func]), kernel])
+            proj.files[0].config_target = 'opencl'
             proj.files[0].body.insert(0, StringTemplate("""
                 #ifdef __APPLE__
                 #include <OpenCL/opencl.h>
@@ -207,21 +212,33 @@ class Im2Col(LazySpecializedFunction):
         else:
             raise Exception(
                 "Unsupport backend for im2col {}".format(self.backend))
-        return (proj, entry_type)
+        return proj.files
 
-    def finalize(self, proj, entry_type):
-        proj, entry_type = proj
+    def finalize(self, files, program_cfg):
+        arg_cfg, tune_cfg = program_cfg
+
+        height_col = (arg_cfg['height'] + 2 * arg_cfg['padding_h'] -
+                      arg_cfg['kernel_h']) // arg_cfg['stride_h'] + 1
+        width_col = (arg_cfg['width'] + 2 * arg_cfg['padding_w'] -
+                     arg_cfg['kernel_w']) // arg_cfg['stride_w'] + 1
+        out_shape = (arg_cfg['channels'] * arg_cfg['kernel_h'] *
+                     arg_cfg['kernel_w'], height_col * width_col)
+        out_ptr = np.ctypeslib.ndpointer(arg_cfg['ptr']._dtype_, 2, out_shape)
+        proj = Project(files)
         if self.backend == 'c':
+            entry_type = (None, arg_cfg['ptr'], out_ptr)
             entry_type = ct.CFUNCTYPE(*entry_type)
             fn = CConcreteIm2Col('im2col', proj, entry_type)
             return fn
         elif self.backend == 'ocl':
+            entry_type = (None, cl.cl_command_queue, cl.cl_kernel,
+                          cl.cl_mem, cl.cl_mem)
             entry_type = ct.CFUNCTYPE(*entry_type)
             fn = OclConcreteIm2Col('im2col', proj, entry_type)
             kernel = proj.find(OclFile)
             program = cl.clCreateProgramWithSource(
                 fn.context, kernel.codegen()).build()
-            return fn.finalize(program[kernel.body[0].name.name])
+            return fn.finalize(program[kernel.name])
 
 cpu_im2col = Im2Col()
 gpu_im2col = Im2Col(backend='ocl')

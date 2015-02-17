@@ -1,5 +1,5 @@
 import unittest
-from sejits_caffe.util.im2col import Im2Col
+from sejits_caffe.util.im2col import cpu_im2col, gpu_im2col
 from hindemith.types.hmarray import hmarray
 import numpy as np
 
@@ -42,16 +42,14 @@ class TestIm2Col(unittest.TestCase):
         self.stride = 1
 
     def test_c(self):
-        im2col = Im2Col('c')
-        actual = im2col(self.a, self.a.shape, (11, 11),
-                        (0, 0), (1, 1))
+        actual = cpu_im2col(self.a, self.a.shape, (11, 11),
+                            (0, 0), (1, 1))
         expected = py_im2col(self.a, 11, 0, 1)
         np.testing.assert_allclose(actual, expected)
 
     def test_ocl(self):
-        im2col = Im2Col('ocl')
-        actual = im2col(self.a, self.a.shape, (11, 11),
-                        (0, 0), (1, 1))
+        actual = gpu_im2col(self.a, self.a.shape, (11, 11),
+                            (0, 0), (1, 1))
         expected = py_im2col(self.a, 11, 0, 1)
         actual.copy_to_host_if_dirty()
         np.testing.assert_allclose(actual, expected)

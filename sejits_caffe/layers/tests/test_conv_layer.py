@@ -6,6 +6,66 @@ from google.protobuf import text_format
 import os
 from hindemith.types.hmarray import hmarray
 import unittest
+from ctree.jit import LazySpecializedFunction, ConcreteSpecializedFunction
+from ctree.c.nodes import CFile
+from ctree.nodes import Project
+from ctree.templates.nodes import FileTemplate
+
+
+class ConvConcrete(ConcreteSpecializedFunction):
+    def __init__(self, entry_name, proj, entry_type):
+        pass
+
+
+class NaiveConv(LazySpecializedFunction):
+    def __init__(self, conv_param):
+        super(NaiveConv, self).__init__(None)
+        self.conv_param = conv_param
+
+    def args_to_subconfig(self, args):
+        cfg = {}
+        for name, arg in zip(['in_ptr', 'weights', 'bias', 'out'], args):
+            cfg[name] = np.ctypeslib.ndpointer(arg.dtype, arg.ndim, arg.shape)
+        return cfg
+
+    def transform(self, tree, program_cfg):
+        arg_cfg, tune_cfg = program_cfg
+        kernel_size = conv_param.kernel_size
+        pad = conv_param.pad
+        stride = conv_param.stride
+        group = conv_param.group
+        out_c, out_h, out_w = arg_cfg['out']._shape_
+        in_ptr_c, in_ptr_h, in_ptr_w = arg_cfg['in_ptr']._shape_
+        weights_c, weights_h, weights_w = arg_cfg['weights']._shape_
+        return [CFile('conv', [
+            FileTemplate(
+                'conv_test.tmpl.c',
+                {
+                    'kernel_size': kernel_size,
+                    'pad': pad,
+                    'stride': stride,
+                    'group': group,
+                    'out_c': out_c,
+                    'out_h': out_h,
+                    'out_w': out_w,
+                    'in_c': in_ptr_c,
+                    'in_h': in_ptr_h,
+                    'in_w': in_ptr_w,
+                    'weights_c': weights_c,
+                    'weights_h': weights_h,
+                    'weights_w': weights_w,
+                }
+        )])]
+
+    def finalize(self, files, program_cfg):
+        arg_cfg, tune_cfg = program_cfg
+        proj = Project(files)
+        entry_type = (None, )
+        for name in ['in_ptr', 'weights', 'bias', 'out']:
+            entry_type += (arg_cfg[name], )
+        fn = ConvConcrete('conv', proj, )
+        return fn
+        
 
 
 def numpy_convolve(batch, weights, expected):
@@ -46,6 +106,7 @@ class ConvLayerTest(unittest.TestCase):
         actual = actual.reshape((5, 25, height_out, width_out))
         new_weights = conv.weights.reshape(25, 3, 11, 11)
         numpy_convolve(in_batch, new_weights, expected)
+        actual.copy_to_host_if_dirty()
         self._check(actual, expected)
 
     def test_cpu_forward(self):
