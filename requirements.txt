@@ -1,5 +1,4 @@
 ctree
 hindemith
-protobuf
+--pre protobuf
 enum34
-scipy

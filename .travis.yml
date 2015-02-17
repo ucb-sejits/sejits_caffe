@@ -5,11 +5,10 @@ python:
   - '3.4'
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers libprotobuf-dev
+  - sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers libprotobuf-dev python-scipy
 install:
   - pip install coveralls coverage nose
   - pip install -r requirements.txt
-  - pip install --pre protobuf
 script:
   - nosetests --verbose --with-coverage --cover-package=sejits_caffe --cover-erase
 after_success:
