@@ -87,6 +87,12 @@ class ConvLayerTest(unittest.TestCase):
         except AssertionError as e:
             self.fail(e)
 
+    def setUp(self):
+        param_string = open(path + '/test.prototxt').read()
+        param = caffe_pb2.NetParameter()
+        text_format.Merge(param_string, param)
+        self.layers = param.layers
+
     def _forward_test(self, backend, param):
         conv_param = param.convolution_param
         num_output = conv_param.num_output
@@ -114,15 +120,12 @@ class ConvLayerTest(unittest.TestCase):
         self._check(actual, expected)
 
     def test_simple_layer(self):
-        param_string = open(path + '/test.prototxt').read()
-        param = caffe_pb2.NetParameter()
-        text_format.Merge(param_string, param)
-        self._forward_test('cpu', param.layers[0])
-        self._forward_test('gpu', param.layers[0])
+        self._forward_test('cpu', self.layers[0])
+        self._forward_test('gpu', self.layers[0])
 
-    def test_alex_net(self):
+    def test_alex_net_conv1(self):
         param_string = open(path + '/alexnet.prototxt').read()
         param = caffe_pb2.NetParameter()
         text_format.Merge(param_string, param)
-        self._forward_test('cpu', param.layers[2])
-        self._forward_test('gpu', param.layers[2])
+        self._forward_test('cpu', self.layers[1])
+        self._forward_test('gpu', self.layers[1])
