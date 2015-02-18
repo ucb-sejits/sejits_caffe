@@ -44,7 +44,8 @@ class NaiveConv(LazySpecializedFunction):
         weights_g, weights_c, weights_h, weights_w = arg_cfg['weights']._shape_
         return [CFile('conv', [
             FileTemplate(
-                os.path.dirname(os.path.realpath(__file__)) + '/conv_test.tmpl.c',
+                os.path.dirname(os.path.realpath(__file__)) +
+                '/conv_test.tmpl.c',
                 {
                     'kernel_size': Constant(kernel_size),
                     'pad': Constant(pad),
@@ -64,7 +65,7 @@ class NaiveConv(LazySpecializedFunction):
                     'weight_w': Constant(weights_w),
                     'bias_term': Constant(1)
                 }
-        )], config_target='omp')]
+            )], config_target='omp')]
 
     def finalize(self, files, program_cfg):
         arg_cfg, tune_cfg = program_cfg
@@ -74,7 +75,6 @@ class NaiveConv(LazySpecializedFunction):
             entry_type += (arg_cfg[name], )
         fn = ConvConcrete('conv', proj, ct.CFUNCTYPE(*entry_type))
         return fn
-        
 
 
 path = os.path.dirname(os.path.realpath(__file__))
