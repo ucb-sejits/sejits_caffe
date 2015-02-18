@@ -89,10 +89,14 @@ class ConvLayerTest(unittest.TestCase):
 
     def _forward_test(self, backend, param):
         conv_param = param.convolution_param
-        height_out = (256 - conv_param.kernel_size) + 1
-        width_out = (256 - conv_param.kernel_size) + 1
-        actual_shape = (5, conv_param.num_output, height_out * width_out)
-        expected_shape = (5, conv_param.num_output, height_out, width_out)
+        num_output = conv_param.num_output
+        kernel_size = conv_param.kernel_size
+        height_out = (256 - 2 * conv_param.pad - kernel_size) / \
+            conv_param.stride + 1
+        width_out = (256 - 2 * conv_param.pad - kernel_size) / \
+            conv_param.stride + 1
+        actual_shape = (5, num_output, height_out * width_out)
+        expected_shape = (5, num_output, height_out, width_out)
         conv = ConvLayer(param)
         expected_conv = NaiveConv(conv_param)
         conv.backend = backend
@@ -102,8 +106,9 @@ class ConvLayerTest(unittest.TestCase):
 
         conv.set_up(hmarray(in_batch), actual)
         conv.forward(hmarray(in_batch), actual)
-        actual = actual.reshape((5, 25, height_out, width_out))
-        new_weights = conv.weights.reshape(25, 3, 11, 11)
+        actual = actual.reshape((5, num_output, height_out, width_out))
+        new_shape = num_output, 3, kernel_size, kernel_size
+        new_weights = conv.weights.reshape(new_shape)
         expected_conv(in_batch, new_weights, conv.bias, expected)
         actual.copy_to_host_if_dirty()
         self._check(actual, expected)
