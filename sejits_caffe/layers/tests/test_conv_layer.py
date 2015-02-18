@@ -103,10 +103,15 @@ class ConvLayerTest(unittest.TestCase):
         in_batch = np.random.rand(5, 3, 256, 256).astype(np.float32) * 255
 
         conv.set_up(hmarray(in_batch), actual)
-        conv.forward(hmarray(in_batch), actual)
+        from ctree.util import Timer
+        with Timer() as t:
+            conv.forward(hmarray(in_batch), actual)
+        print(t.interval)
         actual = actual.reshape((5, 25, height_out, width_out))
         new_weights = conv.weights.reshape(25, 3, 11, 11)
-        expected_conv(in_batch, new_weights, conv.bias, expected)
+        with Timer() as t:
+            expected_conv(in_batch, new_weights, conv.bias, expected)
+        print(t.interval)
         actual.copy_to_host_if_dirty()
         self._check(actual, expected)
 

@@ -15,7 +15,7 @@ void conv(float* in, float* weights, float* bias, float* out) {
   int k_g = $in_c / groups;
   int o_head, k_head;
   // Convolution
-  # pragma omp parallel for
+  #pragma omp parallel for
   for (int n = 0; n < $out_num; n++) {
     for (int g = 0; g < groups; g++) {
       o_head = o_g * g;
@@ -48,6 +48,7 @@ void conv(float* in, float* weights, float* bias, float* out) {
   }
   // Bias
   if ($bias_term) {
+    #pragma omp parallel for
     for (int n = 0; n < $out_num; n++) {
       for (int o = 0; o < $out_c; o++) {
         for (int y = 0; y < $out_h; y++) {
