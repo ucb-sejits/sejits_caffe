@@ -34,6 +34,7 @@ class NaiveConv(LazySpecializedFunction):
 
     def transform(self, tree, program_cfg):
         arg_cfg, tune_cfg = program_cfg
+        conv_param = self.conv_param
         kernel_size = conv_param.kernel_size
         pad = conv_param.pad
         stride = conv_param.stride
@@ -77,14 +78,6 @@ class NaiveConv(LazySpecializedFunction):
 
 
 path = os.path.dirname(os.path.realpath(__file__))
-param = caffe_pb2.NetParameter()
-param_string = open(path + '/test.prototxt').read()
-text_format.Merge(param_string, param)
-conv_param = param.layers[0].convolution_param
-height_out = (256 - conv_param.kernel_size) + 1
-width_out = (256 - conv_param.kernel_size) + 1
-actual_shape = (5, conv_param.num_output, height_out * width_out)
-expected_shape = (5, conv_param.num_output, height_out, width_out)
 
 
 class ConvLayerTest(unittest.TestCase):
@@ -94,29 +87,37 @@ class ConvLayerTest(unittest.TestCase):
         except AssertionError as e:
             self.fail(e)
 
-    def _forward_test(self, backend):
-        conv = ConvLayer(param.layers[0])
-        expected_conv = NaiveConv(param.layers[0].convolution_param)
+    def _forward_test(self, backend, param):
+        conv_param = param.convolution_param
+        height_out = (256 - conv_param.kernel_size) + 1
+        width_out = (256 - conv_param.kernel_size) + 1
+        actual_shape = (5, conv_param.num_output, height_out * width_out)
+        expected_shape = (5, conv_param.num_output, height_out, width_out)
+        conv = ConvLayer(param)
+        expected_conv = NaiveConv(conv_param)
         conv.backend = backend
         actual = hmarray(np.zeros(actual_shape, np.float32))
         expected = np.zeros(expected_shape, np.float32)
         in_batch = np.random.rand(5, 3, 256, 256).astype(np.float32) * 255
 
         conv.set_up(hmarray(in_batch), actual)
-        from ctree.util import Timer
-        with Timer() as t:
-            conv.forward(hmarray(in_batch), actual)
-        print(t.interval)
+        conv.forward(hmarray(in_batch), actual)
         actual = actual.reshape((5, 25, height_out, width_out))
         new_weights = conv.weights.reshape(25, 3, 11, 11)
-        with Timer() as t:
-            expected_conv(in_batch, new_weights, conv.bias, expected)
-        print(t.interval)
+        expected_conv(in_batch, new_weights, conv.bias, expected)
         actual.copy_to_host_if_dirty()
         self._check(actual, expected)
 
-    def test_cpu_forward(self):
-        self._forward_test('cpu')
+    def test_simple_layer(self):
+        param_string = open(path + '/test.prototxt').read()
+        param = caffe_pb2.NetParameter()
+        text_format.Merge(param_string, param)
+        self._forward_test('cpu', param.layers[0])
+        self._forward_test('gpu', param.layers[0])
 
-    def test_gpu_forward(self):
-        self._forward_test('gpu')
+    def test_alex_net(self):
+        param_string = open(path + '/alexnet.prototxt').read()
+        param = caffe_pb2.NetParameter()
+        text_format.Merge(param_string, param)
+        self._forward_test('cpu', param.layers[2])
+        self._forward_test('gpu', param.layers[2])
