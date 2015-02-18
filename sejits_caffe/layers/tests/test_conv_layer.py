@@ -124,8 +124,5 @@ class ConvLayerTest(unittest.TestCase):
         self._forward_test('gpu', self.layers[0])
 
     def test_alex_net_conv1(self):
-        param_string = open(path + '/alexnet.prototxt').read()
-        param = caffe_pb2.NetParameter()
-        text_format.Merge(param_string, param)
         self._forward_test('cpu', self.layers[1])
         self._forward_test('gpu', self.layers[1])

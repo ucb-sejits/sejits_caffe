@@ -4,7 +4,24 @@ import logging
 from sejits_caffe.util.im2col import cpu_im2col, gpu_im2col
 from hindemith import hmarray
 from hindemith.operations.gemm import gemm
-# import ctypes as ct
+import ctypes
+from ctypes import byref, c_int, c_float, c_char
+
+_blaslib = ctypes.cdll.LoadLibrary("libcblas.so")
+def cpu_gemm(A, B, C, m, n, k):
+
+    cblas_row_major = c_int(101)
+    no_trans = c_int(111)
+    m = c_int(m)
+    n = c_int(n)
+    k = c_int(k)
+    one = c_float(1.0)
+    zero = c_float(0.0)
+
+    _blaslib.cblas_sgemm(cblas_row_major, no_trans, no_trans, m, n, k, 
+            one, A.ctypes.data_as(ctypes.c_void_p), k, 
+            B.ctypes.data_as(ctypes.c_void_p), n, zero, 
+            C.ctypes.data_as(ctypes.c_void_p), n)
 
 
 class ConvLayer(BaseLayer):
@@ -66,7 +83,7 @@ class ConvLayer(BaseLayer):
             # TODO: Add support for group > 1
             # for g in range(self.group):
 
-            np.dot(self.weights, col_data, top_data)
+            cpu_gemm(self.weights, col_data, top_data, self.M, self.N, self.K)
 
             if self.bias_term:
                 top_data += self.bias[:, np.newaxis]
