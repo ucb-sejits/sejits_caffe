@@ -24,9 +24,9 @@ def cpu_gemm(A, B, C, m, n, k):
 
     cblas_row_major = c_int(101)
     no_trans = c_int(111)
-    m = c_int(m)
-    n = c_int(n)
-    k = c_int(k)
+    m = c_int(int(m))
+    n = c_int(int(n))
+    k = c_int(int(k))
     one = c_float(1.0)
     zero = c_float(0.0)
 
@@ -45,9 +45,9 @@ err = _clblaslib.clblasSetup()
 def gpu_gemm(A, B, C, m, n, k):
     cblas_row_major = c_int(0)
     no_trans = c_int(0)
-    m = c_size_t(m)
-    n = c_size_t(n)
-    k = c_size_t(k)
+    m = c_size_t(int(m))
+    n = c_size_t(int(n))
+    k = c_size_t(int(k))
     one = c_float(1.0)
     zero = c_float(0.0)
 
