@@ -3,15 +3,22 @@ import numpy as np
 import logging
 from sejits_caffe.util.im2col import cpu_im2col, gpu_im2col
 from hindemith import hmarray
-from hindemith.operations.gemm import gemm
+# from hindemith.operations.gemm import gemm
 import ctypes
-from ctypes import byref, c_int, c_float, c_char
+from ctypes import c_int, c_float, c_size_t
 import pycl as cl
 import os
+from sys import platform as _platform
 
-_blaslib = ctypes.cdll.LoadLibrary("libcblas.so")
+if _platform == "linux" or _platform == "linux2":
+    ext = "so"
+elif _platform == "darwin":
+    ext = "dylib"
+
+_blaslib = ctypes.cdll.LoadLibrary("libcblas.{}".format(ext))
 path = os.path.dirname(os.path.abspath(__file__))
-_clblaslib = ctypes.cdll.LoadLibrary(path + "/libclBLAS.so")
+_clblaslib = ctypes.cdll.LoadLibrary(path + "/libclBLAS.{}".format(ext))
+
 
 def cpu_gemm(A, B, C, m, n, k):
 
@@ -23,32 +30,28 @@ def cpu_gemm(A, B, C, m, n, k):
     one = c_float(1.0)
     zero = c_float(0.0)
 
-    _blaslib.cblas_sgemm(cblas_row_major, no_trans, no_trans, m, n, k, 
-            one, A.ctypes.data_as(ctypes.c_void_p), k, 
-            B.ctypes.data_as(ctypes.c_void_p), n, zero, 
-            C.ctypes.data_as(ctypes.c_void_p), n)
+    _blaslib.cblas_sgemm(cblas_row_major, no_trans, no_trans, m, n, k,
+                         one, A.ctypes.data_as(ctypes.c_void_p), k,
+                         B.ctypes.data_as(ctypes.c_void_p), n, zero,
+                         C.ctypes.data_as(ctypes.c_void_p), n)
 
-
-# _clblaslib.clblasSgemm.argtypes = (c_int, c_int, c_int, c_int, c_int, c_int,
-#         c_float, cl.cl_mem, c_int, c_int, cl.cl_mem, c_int, c_int,
-#         c_float, cl.cl_mem, c_int, c_int, c_int,
-#         ctypes.POINTER(cl.cl_command_queue), c_int, ctypes.POINTER(cl.cl_event), ctypes.POINTER(cl.cl_event))
-# _clblaslib.clblasSgemm.restype = c_int
 
 from ctree.ocl import get_context_and_queue_from_devices
 devices = cl.clGetDeviceIDs()
 context, queue = get_context_and_queue_from_devices([devices[-1]])
 err = _clblaslib.clblasSetup()
 
+
 def gpu_gemm(A, B, C, m, n, k):
     cblas_row_major = c_int(0)
     no_trans = c_int(0)
-    m = c_int(m)
-    n = c_int(n)
-    k = c_int(k)
+    m = c_size_t(m)
+    n = c_size_t(n)
+    k = c_size_t(k)
     one = c_float(1.0)
     zero = c_float(0.0)
 
+    cl.clFinish(queue)
     A.copy_to_host_if_dirty()
     B.copy_to_host_if_dirty()
     C.copy_to_host_if_dirty()
@@ -58,10 +61,12 @@ def gpu_gemm(A, B, C, m, n, k):
     evt.wait()
     c_buf, evt = cl.buffer_from_ndarray(queue, C)
     evt.wait()
-    err = _clblaslib.clblasSgemm(cblas_row_major, no_trans, no_trans, m, n, k, 
-            one, a_buf, c_int(0), k, 
-            b_buf, c_int(0), n, zero, 
-            c_buf, c_int(0), n, c_int(1), ctypes.byref(queue), c_int(0), None, None)
+    cl.clFinish(queue)
+    err = _clblaslib.clblasSgemm(cblas_row_major, no_trans, no_trans, m, n, k,
+                                 one, a_buf, c_size_t(0), k, b_buf,
+                                 c_size_t(0), n, zero, c_buf, c_size_t(0), n,
+                                 c_size_t(1), ctypes.byref(queue), c_size_t(0),
+                                 None, None)
     print(err)
     C._ocl_buf = c_buf
     C._host_dirty = True
