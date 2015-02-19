@@ -51,24 +51,11 @@ def gpu_gemm(A, B, C, m, n, k):
     one = c_float(1.0)
     zero = c_float(0.0)
 
-    cl.clFinish(queue)
-    A.copy_to_host_if_dirty()
-    B.copy_to_host_if_dirty()
-    C.copy_to_host_if_dirty()
-    a_buf, evt = cl.buffer_from_ndarray(queue, A)
-    evt.wait()
-    b_buf, evt = cl.buffer_from_ndarray(queue, B)
-    evt.wait()
-    c_buf, evt = cl.buffer_from_ndarray(queue, C)
-    evt.wait()
-    cl.clFinish(queue)
-    err = _clblaslib.clblasSgemm(cblas_row_major, no_trans, no_trans, m, n, k,
-                                 one, a_buf, c_size_t(0), k, b_buf,
-                                 c_size_t(0), n, zero, c_buf, c_size_t(0), n,
-                                 c_size_t(1), ctypes.byref(queue), c_size_t(0),
-                                 None, None)
-    print(err)
-    C._ocl_buf = c_buf
+    _clblaslib.clblasSgemm(cblas_row_major, no_trans, no_trans, m, n, k,
+                           one, A.ocl_buf, c_size_t(0), k, B.ocl_buf,
+                           c_size_t(0), n, zero, C.ocl_buf, c_size_t(0), n,
+                           c_size_t(1), ctypes.byref(queue), c_size_t(0),
+                           None, None)
     C._host_dirty = True
     cl.clFinish(queue)
 
