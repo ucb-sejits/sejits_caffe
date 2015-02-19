@@ -104,11 +104,11 @@ class ConvLayer(BaseLayer):
         assert num_output % self.group == 0, \
             "Number of outputs should be a multiple of group."
 
-        self.M = num_output / self.group
-        self.K = channels * self.kernel_h * self.kernel_w / self.group
-        self.height_out = (height + 2 * self.pad_h - self.kernel_h) / \
+        self.M = num_output // self.group
+        self.K = channels * self.kernel_h * self.kernel_w // self.group
+        self.height_out = (height + 2 * self.pad_h - self.kernel_h) // \
             self.stride_h + 1
-        self.width_out = (width + 2 * self.pad_w - self.kernel_w) / \
+        self.width_out = (width + 2 * self.pad_w - self.kernel_w) // \
             self.stride_w + 1
         self.N = self.height_out * self.width_out
 

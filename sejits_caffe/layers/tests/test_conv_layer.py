@@ -97,10 +97,12 @@ class ConvLayerTest(unittest.TestCase):
         conv_param = param.convolution_param
         num_output = conv_param.num_output
         kernel_size = conv_param.kernel_size
-        height_out = (256 - 2 * conv_param.pad - kernel_size) / \
+        height_out = (256 - 2 * conv_param.pad - kernel_size) // \
             conv_param.stride + 1
-        width_out = (256 - 2 * conv_param.pad - kernel_size) / \
+        width_out = (256 - 2 * conv_param.pad - kernel_size) // \
             conv_param.stride + 1
+        print(height_out)
+        print(width_out)
         actual_shape = (5, num_output, height_out * width_out)
         expected_shape = (5, num_output, height_out, width_out)
         conv = ConvLayer(param)
