@@ -6,8 +6,13 @@ from hindemith import hmarray
 from hindemith.operations.gemm import gemm
 import ctypes
 from ctypes import byref, c_int, c_float, c_char
+import pycl as cl
+import os
 
 _blaslib = ctypes.cdll.LoadLibrary("libcblas.so")
+path = os.path.dirname(os.path.abspath(__file__))
+_clblaslib = ctypes.cdll.LoadLibrary(path + "/libclBLAS.so")
+
 def cpu_gemm(A, B, C, m, n, k):
 
     cblas_row_major = c_int(101)
@@ -22,6 +27,45 @@ def cpu_gemm(A, B, C, m, n, k):
             one, A.ctypes.data_as(ctypes.c_void_p), k, 
             B.ctypes.data_as(ctypes.c_void_p), n, zero, 
             C.ctypes.data_as(ctypes.c_void_p), n)
+
+
+# _clblaslib.clblasSgemm.argtypes = (c_int, c_int, c_int, c_int, c_int, c_int,
+#         c_float, cl.cl_mem, c_int, c_int, cl.cl_mem, c_int, c_int,
+#         c_float, cl.cl_mem, c_int, c_int, c_int,
+#         ctypes.POINTER(cl.cl_command_queue), c_int, ctypes.POINTER(cl.cl_event), ctypes.POINTER(cl.cl_event))
+# _clblaslib.clblasSgemm.restype = c_int
+
+from ctree.ocl import get_context_and_queue_from_devices
+devices = cl.clGetDeviceIDs()
+context, queue = get_context_and_queue_from_devices([devices[-1]])
+err = _clblaslib.clblasSetup()
+
+def gpu_gemm(A, B, C, m, n, k):
+    cblas_row_major = c_int(0)
+    no_trans = c_int(0)
+    m = c_int(m)
+    n = c_int(n)
+    k = c_int(k)
+    one = c_float(1.0)
+    zero = c_float(0.0)
+
+    A.copy_to_host_if_dirty()
+    B.copy_to_host_if_dirty()
+    C.copy_to_host_if_dirty()
+    a_buf, evt = cl.buffer_from_ndarray(queue, A)
+    evt.wait()
+    b_buf, evt = cl.buffer_from_ndarray(queue, B)
+    evt.wait()
+    c_buf, evt = cl.buffer_from_ndarray(queue, C)
+    evt.wait()
+    err = _clblaslib.clblasSgemm(cblas_row_major, no_trans, no_trans, m, n, k, 
+            one, a_buf, c_int(0), k, 
+            b_buf, c_int(0), n, zero, 
+            c_buf, c_int(0), n, c_int(1), ctypes.byref(queue), c_int(0), None, None)
+    print(err)
+    C._ocl_buf = c_buf
+    C._host_dirty = True
+    cl.clFinish(queue)
 
 
 class ConvLayer(BaseLayer):
@@ -98,11 +142,11 @@ class ConvLayer(BaseLayer):
             # TODO: Add support for group > 1
             # for g in range(self.group):
 
-            gemm(self.weights, col_data, top_data, 1.0, 0.0)
+            gpu_gemm(self.weights, col_data, top_data, self.M, self.N, self.K)
             top_data.copy_to_host_if_dirty()
 
-            if self.bias_term:
-                top_data += self.bias[:, np.newaxis]
+            # if self.bias_term:
+            #     top_data += self.bias[:, np.newaxis]
 
     def forward(self, bottom, top):
         if self.backend == 'gpu':

@@ -68,7 +68,7 @@ class CConcreteIm2Col(ConcreteSpecializedFunction):
         stride_h, stride_w = args[4]
         h_out = (h + 2 * padding_h - kernel_h) / stride_h + 1
         w_out = (w + 2 * padding_w - kernel_w) / stride_w + 1
-        out_shape = (channels * kernel_h * kernel_w, h_out * w_out)
+        out_shape = (channels * kernel_h * kernel_w, h_out, w_out)
         output = empty(out_shape, np.float32)
         self._c_function(args[0], output)
         return output
@@ -93,7 +93,7 @@ class OclConcreteIm2Col(ConcreteSpecializedFunction):
         stride_h, stride_w = args[4]
         h_out = (h + 2 * padding_h - kernel_h) / stride_h + 1
         w_out = (w + 2 * padding_w - kernel_w) / stride_w + 1
-        out_shape = (channels * kernel_h * kernel_w, h_out * w_out)
+        out_shape = (channels * kernel_h * kernel_w, h_out, w_out)
         output = empty(out_shape, np.float32)
         output._host_dirty = True
         self._c_function(self.queue, self.kernel, args[0].ocl_buf,
@@ -138,8 +138,8 @@ class Im2Col(LazySpecializedFunction):
         width_col = (arg_cfg['width'] + 2 * arg_cfg['padding_w'] -
                      arg_cfg['kernel_w']) // arg_cfg['stride_w'] + 1
         out_shape = (arg_cfg['channels'] * arg_cfg['kernel_h'] *
-                     arg_cfg['kernel_w'], height_col * width_col)
-        out_ptr = np.ctypeslib.ndpointer(arg_cfg['ptr']._dtype_, 2, out_shape)
+                     arg_cfg['kernel_w'], height_col, width_col)
+        out_ptr = np.ctypeslib.ndpointer(arg_cfg['ptr']._dtype_, 3, out_shape)
         if self.backend == 'c':
             loop_body = [StringTemplate(im2col_c, {
                 'Dtype': SymbolRef('float'),
@@ -222,8 +222,8 @@ class Im2Col(LazySpecializedFunction):
         width_col = (arg_cfg['width'] + 2 * arg_cfg['padding_w'] -
                      arg_cfg['kernel_w']) // arg_cfg['stride_w'] + 1
         out_shape = (arg_cfg['channels'] * arg_cfg['kernel_h'] *
-                     arg_cfg['kernel_w'], height_col * width_col)
-        out_ptr = np.ctypeslib.ndpointer(arg_cfg['ptr']._dtype_, 2, out_shape)
+                     arg_cfg['kernel_w'], height_col, width_col)
+        out_ptr = np.ctypeslib.ndpointer(arg_cfg['ptr']._dtype_, 3, out_shape)
         proj = Project(files)
         if self.backend == 'c':
             entry_type = (None, arg_cfg['ptr'], out_ptr)
