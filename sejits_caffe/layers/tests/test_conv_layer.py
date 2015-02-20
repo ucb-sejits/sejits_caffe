@@ -128,6 +128,7 @@ class ConvLayerTest(unittest.TestCase):
         self._forward_test('cpu', self.layers[1], (5, 3, 256, 256))
         self._forward_test('gpu', self.layers[1], (5, 3, 256, 256))
 
+    @unittest.skip("Grouping currently unsupported")
     def test_alex_net_conv2(self):
         self._forward_test('cpu', self.layers[2], (5, 16, 32, 32))
         self._forward_test('gpu', self.layers[2], (5, 16, 32, 32))
