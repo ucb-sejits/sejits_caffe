@@ -93,7 +93,7 @@ class ConvLayerTest(unittest.TestCase):
         text_format.Merge(param_string, param)
         self.layers = param.layers
 
-    def _forward_test(self, backend, param):
+    def _forward_test(self, backend, param, in_shape):
         conv_param = param.convolution_param
         num_output = conv_param.num_output
         kernel_size = conv_param.kernel_size
@@ -103,28 +103,31 @@ class ConvLayerTest(unittest.TestCase):
             conv_param.stride + 1
         print(height_out)
         print(width_out)
-        actual_shape = (5, num_output, height_out * width_out)
-        expected_shape = (5, num_output, height_out, width_out)
+        actual_shape = (in_shape[0], num_output, height_out * width_out)
+        expected_shape = (in_shape[0], num_output, height_out, width_out)
         conv = ConvLayer(param)
         expected_conv = NaiveConv(conv_param)
         conv.backend = backend
         actual = hmarray(np.zeros(actual_shape, np.float32))
         expected = np.zeros(expected_shape, np.float32)
-        in_batch = np.random.rand(5, 3, 256, 256).astype(np.float32) * 255
+        in_batch = np.random.rand(*in_shape).astype(np.float32) * 255
 
         conv.set_up(hmarray(in_batch), actual)
         conv.forward(hmarray(in_batch), actual)
-        actual = actual.reshape((5, num_output, height_out, width_out))
-        new_shape = num_output, 3, kernel_size, kernel_size
-        new_weights = conv.weights.reshape(new_shape)
-        expected_conv(in_batch, new_weights, conv.bias, expected)
+        actual = actual.reshape((in_shape[0], num_output, height_out,
+                                 width_out))
+        expected_conv(in_batch, conv.weights, conv.bias, expected)
         actual.copy_to_host_if_dirty()
         self._check(actual, expected)
 
     def test_simple_layer(self):
-        self._forward_test('cpu', self.layers[0])
-        self._forward_test('gpu', self.layers[0])
+        self._forward_test('cpu', self.layers[0], (5, 3, 256, 256))
+        self._forward_test('gpu', self.layers[0], (5, 3, 256, 256))
 
     def test_alex_net_conv1(self):
-        self._forward_test('cpu', self.layers[1])
-        self._forward_test('gpu', self.layers[1])
+        self._forward_test('cpu', self.layers[1], (5, 3, 256, 256))
+        self._forward_test('gpu', self.layers[1], (5, 3, 256, 256))
+
+    def test_alex_net_conv2(self):
+        self._forward_test('cpu', self.layers[2], (5, 16, 32, 32))
+        self._forward_test('gpu', self.layers[2], (5, 16, 32, 32))

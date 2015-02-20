@@ -20,7 +20,7 @@ path = os.path.dirname(os.path.abspath(__file__))
 _clblaslib = ctypes.cdll.LoadLibrary(path + "/libclBLAS.{}".format(ext))
 
 
-def cpu_gemm(A, B, C, m, n, k):
+def cpu_gemm(A, A_offset, B, B_offset, C, C_offset, m, n, k):
 
     cblas_row_major = c_int(101)
     no_trans = c_int(111)
@@ -29,11 +29,15 @@ def cpu_gemm(A, B, C, m, n, k):
     k = c_int(int(k))
     one = c_float(1.0)
     zero = c_float(0.0)
+    A_ptr = A.ctypes.data_as(ctypes.c_void_p)
+    A_ptr.value += A_offset
+    B_ptr = B.ctypes.data_as(ctypes.c_void_p)
+    B_ptr.value += B_offset
+    C_ptr = C.ctypes.data_as(ctypes.c_void_p)
+    C_ptr.value += C_offset
 
     _blaslib.cblas_sgemm(cblas_row_major, no_trans, no_trans, m, n, k,
-                         one, A.ctypes.data_as(ctypes.c_void_p), k,
-                         B.ctypes.data_as(ctypes.c_void_p), n, zero,
-                         C.ctypes.data_as(ctypes.c_void_p), n)
+                         one, A_ptr, k, B_ptr, n, zero, C_ptr, n)
 
 
 from ctree.ocl import get_context_and_queue_from_devices
@@ -42,7 +46,7 @@ context, queue = get_context_and_queue_from_devices([devices[-1]])
 err = _clblaslib.clblasSetup()
 
 
-def gpu_gemm(A, B, C, m, n, k):
+def gpu_gemm(A, A_offset, B, B_offset, C, C_offset, m, n, k):
     cblas_row_major = c_int(0)
     no_trans = c_int(0)
     m = c_size_t(int(m))
@@ -52,8 +56,9 @@ def gpu_gemm(A, B, C, m, n, k):
     zero = c_float(0.0)
 
     _clblaslib.clblasSgemm(cblas_row_major, no_trans, no_trans, m, n, k,
-                           one, A.ocl_buf, c_size_t(0), k, B.ocl_buf,
-                           c_size_t(0), n, zero, C.ocl_buf, c_size_t(0), n,
+                           one, A.ocl_buf, c_size_t(A_offset), k, B.ocl_buf,
+                           c_size_t(B_offset), n, zero, C.ocl_buf,
+                           c_size_t(C_offset), n,
                            c_size_t(1), ctypes.byref(queue), c_size_t(0),
                            None, None)
     C._host_dirty = True
@@ -103,7 +108,8 @@ class ConvLayer(BaseLayer):
         if hasattr(self, 'weights'):
             logging.debug("Skipping parameter initialization")
         else:
-            self.weights = hmarray((self.M, self.K), np.float32)
+            self.weights = hmarray((num_output, channels // self.group,
+                                    self.kernel_h, self.kernel_w), np.float32)
             self.weights.fill(.1)
             self.weights._ocl_dirty = True
             if self.bias_term:
@@ -117,9 +123,14 @@ class ConvLayer(BaseLayer):
                                   (self.pad_h, self.pad_w),
                                   (self.stride_h, self.stride_w))
             # TODO: Add support for group > 1
-            # for g in range(self.group):
-
-            cpu_gemm(self.weights, col_data, top_data, self.M, self.N, self.K)
+            for g in range(self.group):
+                weight_stride = np.prod(self.weights.shape[1:])
+                col_data_stride = np.prod(col_data.shape[1:])
+                top_data_stride = np.prod(top_data.shape[1:])
+                cpu_gemm(self.weights, g * weight_stride,
+                         col_data, g * col_data_stride,
+                         top_data, g * top_data_stride,
+                         self.M, self.N, self.K)
 
             if self.bias_term:
                 top_data += self.bias[:, np.newaxis]
@@ -132,13 +143,19 @@ class ConvLayer(BaseLayer):
                                   (self.stride_h, self.stride_w))
 
             # TODO: Add support for group > 1
-            # for g in range(self.group):
-
-            gpu_gemm(self.weights, col_data, top_data, self.M, self.N, self.K)
+            for g in range(self.group):
+                weight_stride = np.prod(self.weights.shape[1:])
+                col_data_stride = np.prod(col_data.shape[1:])
+                top_data_stride = np.prod(top_data.shape[1:])
+                gpu_gemm(self.weights, g * weight_stride,
+                         col_data, g * col_data_stride,
+                         top_data, g * top_data_stride,
+                         self.M, self.N,
+                         self.K)
             top_data.copy_to_host_if_dirty()
 
-            # if self.bias_term:
-            #     top_data += self.bias[:, np.newaxis]
+            if self.bias_term:
+                top_data += self.bias[:, np.newaxis]
 
     def forward(self, bottom, top):
         if self.backend == 'gpu':
