@@ -1,3 +1,0 @@
-[submodule "clBLAS"]
-	path = clBLAS
-	url = https://github.com/arrayfire/clBLAS.git

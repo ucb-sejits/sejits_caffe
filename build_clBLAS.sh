@@ -1,5 +1,5 @@
 #! /bin/bash
-git submodule update --init
+git clone https://github.com/arrayfire/clBLAS
 cd clBLAS
 mkdir build && cd build
 cmake ../src -DCMAKE_BUILD_TYPE=Release -DBUILD_KTEST=OFF
@@ -11,4 +11,4 @@ if [ "$(uname)" == "Darwin" ]; then
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     cp clBLAS/build/package/lib64/libclBLAS.so sejits_caffe/layers
 fi
-rm -rf clBLAS/build
+rm -rf clBLAS
