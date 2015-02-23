@@ -97,12 +97,10 @@ class ConvLayerTest(unittest.TestCase):
         conv_param = param.convolution_param
         num_output = conv_param.num_output
         kernel_size = conv_param.kernel_size
-        height_out = (256 - 2 * conv_param.pad - kernel_size) // \
+        height_out = (in_shape[2] + 2 * conv_param.pad - kernel_size) // \
             conv_param.stride + 1
-        width_out = (256 - 2 * conv_param.pad - kernel_size) // \
+        width_out = (in_shape[3] + 2 * conv_param.pad - kernel_size) // \
             conv_param.stride + 1
-        print(height_out)
-        print(width_out)
         actual_shape = (in_shape[0], num_output, height_out * width_out)
         expected_shape = (in_shape[0], num_output, height_out, width_out)
         conv = ConvLayer(param)
@@ -128,7 +126,6 @@ class ConvLayerTest(unittest.TestCase):
         self._forward_test('cpu', self.layers[1], (5, 3, 256, 256))
         self._forward_test('gpu', self.layers[1], (5, 3, 256, 256))
 
-    @unittest.skip("Grouping currently unsupported")
     def test_alex_net_conv2(self):
         self._forward_test('cpu', self.layers[2], (5, 16, 32, 32))
         self._forward_test('gpu', self.layers[2], (5, 16, 32, 32))

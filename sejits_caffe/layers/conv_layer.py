@@ -30,11 +30,11 @@ def cpu_gemm(A, A_offset, B, B_offset, C, C_offset, m, n, k):
     one = c_float(1.0)
     zero = c_float(0.0)
     A_ptr = A.ctypes.data_as(ctypes.c_void_p)
-    A_ptr.value += A_offset
+    A_ptr.value += A_offset * A.itemsize
     B_ptr = B.ctypes.data_as(ctypes.c_void_p)
-    B_ptr.value += B_offset
+    B_ptr.value += B_offset * B.itemsize
     C_ptr = C.ctypes.data_as(ctypes.c_void_p)
-    C_ptr.value += C_offset
+    C_ptr.value += C_offset * C.itemsize
 
     _blaslib.cblas_sgemm(cblas_row_major, no_trans, no_trans, m, n, k,
                          one, A_ptr, k, B_ptr, n, zero, C_ptr, n)
@@ -96,13 +96,23 @@ class ConvLayer(BaseLayer):
         assert num_output % self.group == 0, \
             "Number of outputs should be a multiple of group."
 
-        self.M = num_output // self.group
-        self.K = channels * self.kernel_h * self.kernel_w // self.group
         self.height_out = (height + 2 * self.pad_h - self.kernel_h) // \
             self.stride_h + 1
         self.width_out = (width + 2 * self.pad_w - self.kernel_w) // \
             self.stride_w + 1
-        self.N = self.height_out * self.width_out
+
+        self.conv_out_channels = num_output
+        self.conv_in_channels = channels
+        self.conv_in_height = height
+        self.conv_in_width = width
+        self.conv_out_spatial_dim = self.height_out * self.width_out
+        self.kernel_dim = self.conv_in_channels * self.kernel_h * self.kernel_w
+        self.weight_offset = self.conv_out_channels * self.kernel_dim // self.group \
+            // self.group
+        self.col_offset = self.kernel_dim * self.conv_out_spatial_dim // \
+            self.group
+        self.output_offset = self.conv_out_channels * self.conv_out_spatial_dim \
+            // self.group
 
         self.bias_term = conv_param.bias_term
         if hasattr(self, 'weights'):
@@ -124,13 +134,12 @@ class ConvLayer(BaseLayer):
                                   (self.stride_h, self.stride_w))
             # TODO: Add support for group > 1
             for g in range(self.group):
-                weight_stride = np.prod(self.weights.shape[1:])
-                col_data_stride = np.prod(col_data.shape[1:])
-                top_data_stride = np.prod(top_data.shape[1:])
-                cpu_gemm(self.weights, g * weight_stride,
-                         col_data, g * col_data_stride,
-                         top_data, g * top_data_stride,
-                         self.M, self.N, self.K)
+                cpu_gemm(self.weights, g * self.weight_offset,
+                         col_data, g * self.col_offset,
+                         top_data, g * self.output_offset,
+                         self.conv_out_channels // self.group,
+                         self.conv_out_spatial_dim,
+                         self.kernel_dim // self.group)
 
             if self.bias_term:
                 top_data += self.bias[:, np.newaxis]
@@ -144,14 +153,12 @@ class ConvLayer(BaseLayer):
 
             # TODO: Add support for group > 1
             for g in range(self.group):
-                weight_stride = np.prod(self.weights.shape[1:])
-                col_data_stride = np.prod(col_data.shape[1:])
-                top_data_stride = np.prod(top_data.shape[1:])
-                gpu_gemm(self.weights, g * weight_stride,
-                         col_data, g * col_data_stride,
-                         top_data, g * top_data_stride,
-                         self.M, self.N,
-                         self.K)
+                gpu_gemm(self.weights, g * self.weight_offset,
+                         col_data, g * self.col_offset,
+                         top_data, g * self.output_offset,
+                         self.conv_out_channels // self.group,
+                         self.conv_out_spatial_dim,
+                         self.kernel_dim // self.group)
             top_data.copy_to_host_if_dirty()
 
             if self.bias_term:
