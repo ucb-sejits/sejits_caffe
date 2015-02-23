@@ -129,3 +129,15 @@ class ConvLayerTest(unittest.TestCase):
     def test_alex_net_conv2(self):
         self._forward_test('cpu', self.layers[2], (5, 16, 32, 32))
         self._forward_test('gpu', self.layers[2], (5, 16, 32, 32))
+
+    def test_alex_net_conv3(self):
+        self._forward_test('cpu', self.layers[3], (5, 4, 32, 32))
+        self._forward_test('gpu', self.layers[3], (5, 4, 32, 32))
+
+    def test_alex_net_conv4(self):
+        self._forward_test('cpu', self.layers[4], (5, 8, 32, 32))
+        self._forward_test('gpu', self.layers[4], (5, 8, 32, 32))
+
+    def test_alex_net_conv5(self):
+        self._forward_test('cpu', self.layers[5], (5, 8, 32, 32))
+        self._forward_test('gpu', self.layers[5], (5, 8, 32, 32))
