@@ -123,8 +123,13 @@ class ConvLayer(BaseLayer):
             self.weights.fill(.1)
             self.weights._ocl_dirty = True
             if self.bias_term:
-                self.bias = np.ndarray((num_output, ))
-                self.bias.fill(0)
+                self.bias = np.ndarray((num_output, ), np.float32)
+                filler = conv_param.bias_filler
+                if filler.type == 'constant':
+                    self.bias.fill(filler.value)
+                else:
+                    raise Exception("Filler not implemented for bias filler \
+                        type {}".format(filler.type))
 
     def cpu_forward(self, bottom, top):
         for bottom_data, top_data in zip(bottom, top):

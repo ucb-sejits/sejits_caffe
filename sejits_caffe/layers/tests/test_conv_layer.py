@@ -63,7 +63,7 @@ class NaiveConv(LazySpecializedFunction):
                     'weight_c': Constant(weights_c),
                     'weight_h': Constant(weights_h),
                     'weight_w': Constant(weights_w),
-                    'bias_term': Constant(1)
+                    'bias_term': Constant(1 if conv_param.bias_term else 0)
                 }
             )], config_target='omp')]
 
