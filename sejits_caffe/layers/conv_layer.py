@@ -118,10 +118,17 @@ class ConvLayer(BaseLayer):
         if hasattr(self, 'weights'):
             logging.debug("Skipping parameter initialization")
         else:
-            self.weights = hmarray((num_output, channels // self.group,
-                                    self.kernel_h, self.kernel_w), np.float32)
-            self.weights.fill(.1)
-            self.weights._ocl_dirty = True
+            weights_shape = (num_output, channels // self.group,
+                             self.kernel_h, self.kernel_w)
+            weight_filler = conv_param.weight_filler
+            if weight_filler.type == 'gaussian':
+                self.weights = hmarray(
+                    weight_filler.mean + weight_filler.std *
+                    np.random.standard_normal(weights_shape).astype(np.float32))
+                self.weights._ocl_dirty = True
+            else:
+                raise Exception("Filler not implemented for weight filler \
+                    type {}".format(weight_filler.type))
             if self.bias_term:
                 self.bias = np.ndarray((num_output, ), np.float32)
                 filler = conv_param.bias_filler

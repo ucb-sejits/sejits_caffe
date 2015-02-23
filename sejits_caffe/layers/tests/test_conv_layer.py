@@ -83,7 +83,7 @@ path = os.path.dirname(os.path.realpath(__file__))
 class ConvLayerTest(unittest.TestCase):
     def _check(self, actual, expected):
         try:
-            np.testing.assert_allclose(actual, expected, rtol=1e-04)
+            np.testing.assert_allclose(actual, expected, atol=1e-03)
         except AssertionError as e:
             self.fail(e)
 
