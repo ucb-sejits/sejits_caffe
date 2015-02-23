@@ -138,49 +138,32 @@ class ConvLayer(BaseLayer):
                     raise Exception("Filler not implemented for bias filler \
                         type {}".format(filler.type))
 
-    def cpu_forward(self, bottom, top):
-        for bottom_data, top_data in zip(bottom, top):
-            col_data = cpu_im2col(bottom_data, bottom_data.shape,
-                                  (self.kernel_h, self.kernel_w),
-                                  (self.pad_h, self.pad_w),
-                                  (self.stride_h, self.stride_w))
-            # TODO: Add support for group > 1
-            for g in range(self.group):
-                cpu_gemm(self.weights, g * self.weight_offset,
-                         col_data, g * self.col_offset,
-                         top_data, g * self.output_offset,
-                         self.conv_out_channels // self.group,
-                         self.conv_out_spatial_dim,
-                         self.kernel_dim // self.group)
+        if self.backend == 'gpu':
+            self.gemm = gpu_gemm
+            self.im2col = gpu_im2col
+        elif self.backend == 'cpu':
+            self.gemm = cpu_gemm
+            self.im2col = cpu_im2col
 
-            if self.bias_term:
-                top_data += self.bias[:, np.newaxis]
-
-    def gpu_forward(self, bottom, top):
+    def forward(self, bottom, top):
         for bottom_data, top_data in zip(bottom, top):
-            col_data = gpu_im2col(bottom_data, bottom_data.shape,
-                                  (self.kernel_h, self.kernel_w),
-                                  (self.pad_h, self.pad_w),
-                                  (self.stride_h, self.stride_w))
+            col_data = self.im2col(bottom_data, bottom_data.shape,
+                                   (self.kernel_h, self.kernel_w),
+                                   (self.pad_h, self.pad_w),
+                                   (self.stride_h, self.stride_w))
 
             # TODO: Add support for group > 1
             for g in range(self.group):
-                gpu_gemm(self.weights, g * self.weight_offset,
-                         col_data, g * self.col_offset,
-                         top_data, g * self.output_offset,
-                         self.conv_out_channels // self.group,
-                         self.conv_out_spatial_dim,
-                         self.kernel_dim // self.group)
+                self.gemm(self.weights, g * self.weight_offset,
+                          col_data, g * self.col_offset,
+                          top_data, g * self.output_offset,
+                          self.conv_out_channels // self.group,
+                          self.conv_out_spatial_dim,
+                          self.kernel_dim // self.group)
             top_data.copy_to_host_if_dirty()
 
             if self.bias_term:
                 top_data += self.bias[:, np.newaxis]
-
-    def forward(self, bottom, top):
-        if self.backend == 'gpu':
-            self.gpu_forward(bottom, top)
-        else:
-            self.cpu_forward(bottom, top)
 
     # def backward(self, top, propagate_down, bottom):
     #     weight = None
