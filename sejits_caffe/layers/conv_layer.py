@@ -3,12 +3,15 @@ import numpy as np
 import logging
 from sejits_caffe.util.im2col import cpu_im2col, gpu_im2col
 from hindemith import hmarray
+from hindemith.types.hmarray import EltWiseArrayOp
+EltWiseArrayOp.backend = 'c'
 # from hindemith.operations.gemm import gemm
 import ctypes
 from ctypes import c_int, c_float, c_size_t
 import pycl as cl
 import os
 from sys import platform as _platform
+from sejits_caffe.operations import convolution_2d
 
 if _platform == "linux" or _platform == "linux2":
     ext = "so"
@@ -124,7 +127,8 @@ class ConvLayer(BaseLayer):
             if weight_filler.type == 'gaussian':
                 self.weights = hmarray(
                     weight_filler.mean + weight_filler.std *
-                    np.random.standard_normal(weights_shape).astype(np.float32))
+                    np.random.standard_normal(
+                        weights_shape).astype(np.float32))
                 self.weights._ocl_dirty = True
             else:
                 raise Exception("Filler not implemented for weight filler \
@@ -147,23 +151,32 @@ class ConvLayer(BaseLayer):
 
     def forward(self, bottom, top):
         for bottom_data, top_data in zip(bottom, top):
-            col_data = self.im2col(bottom_data, bottom_data.shape,
-                                   (self.kernel_h, self.kernel_w),
-                                   (self.pad_h, self.pad_w),
-                                   (self.stride_h, self.stride_w))
+            for n in range(self.weights.shape[0]):
+                for g in range(self.weights.shape[1]):
+                    for channel in range(g * self.group, g * self.group +
+                                         self.group):
+                        convolution_2d(
+                            bottom_data[channel], self.weights[n, g],
+                            top_data[n], (self.pad_h, self.pad_w),
+                            (self.stride_h, self.stride_w))
+            # col_data = self.im2col(bottom_data, bottom_data.shape,
+            #                        (self.kernel_h, self.kernel_w),
+            #                        (self.pad_h, self.pad_w),
+            #                        (self.stride_h, self.stride_w))
 
-            # TODO: Add support for group > 1
-            for g in range(self.group):
-                self.gemm(self.weights, g * self.weight_offset,
-                          col_data, g * self.col_offset,
-                          top_data, g * self.output_offset,
-                          self.conv_out_channels // self.group,
-                          self.conv_out_spatial_dim,
-                          self.kernel_dim // self.group)
-            top_data.copy_to_host_if_dirty()
+            # # TODO: Add support for group > 1
+            # for g in range(self.group):
+            #     self.gemm(self.weights, g * self.weight_offset,
+            #               col_data, g * self.col_offset,
+            #               top_data, g * self.output_offset,
+            #               self.conv_out_channels // self.group,
+            #               self.conv_out_spatial_dim,
+            #               self.kernel_dim // self.group)
+            # top_data.copy_to_host_if_dirty()
 
             if self.bias_term:
-                top_data += self.bias[:, np.newaxis]
+                for index, b in enumerate(self.bias):
+                    top_data[index] += b
 
     # def backward(self, top, propagate_down, bottom):
     #     weight = None
