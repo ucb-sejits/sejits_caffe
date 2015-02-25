@@ -8,10 +8,11 @@ EltWiseArrayOp.backend = 'c'
 # from hindemith.operations.gemm import gemm
 import ctypes
 from ctypes import c_int, c_float, c_size_t
+from sejits_caffe.operations import convolution_2d
+"""
 import pycl as cl
 import os
 from sys import platform as _platform
-from sejits_caffe.operations import convolution_2d
 
 if _platform == "linux" or _platform == "linux2":
     ext = "so"
@@ -66,6 +67,7 @@ def gpu_gemm(A, A_offset, B, B_offset, C, C_offset, m, n, k):
                            None, None)
     C._host_dirty = True
     cl.clFinish(queue)
+"""
 
 
 class ConvLayer(BaseLayer):
@@ -142,37 +144,26 @@ class ConvLayer(BaseLayer):
                     raise Exception("Filler not implemented for bias filler \
                         type {}".format(filler.type))
 
-        if self.backend == 'gpu':
-            self.gemm = gpu_gemm
-            self.im2col = gpu_im2col
-        elif self.backend == 'cpu':
-            self.gemm = cpu_gemm
-            self.im2col = cpu_im2col
+        # if self.backend == 'gpu':
+        #     self.gemm = gpu_gemm
+        #     self.im2col = gpu_im2col
+        # elif self.backend == 'cpu':
+        #     self.gemm = cpu_gemm
+        #     self.im2col = cpu_im2col
 
     def forward(self, bottom, top):
+	out_groups = top.shape[1] // self.group
+	in_groups = bottom.shape[1] // self.group
         for bottom_data, top_data in zip(bottom, top):
-            for n in range(self.weights.shape[0]):
-                for g in range(self.weights.shape[1]):
-                    for channel in range(g * self.group, g * self.group +
-                                         self.group):
+            for group in range(self.group):
+                for out_group in range(0, out_groups):
+                    for in_group in range(0, in_groups):
                         convolution_2d(
-                            bottom_data[channel], self.weights[n, g],
-                            top_data[n], (self.pad_h, self.pad_w),
+                            bottom_data[in_group + group * in_groups], 
+                            self.weights[out_group + group * out_groups, in_group],
+                            top_data[out_group + group * out_groups], 
+                            (self.pad_h, self.pad_w),
                             (self.stride_h, self.stride_w))
-            # col_data = self.im2col(bottom_data, bottom_data.shape,
-            #                        (self.kernel_h, self.kernel_w),
-            #                        (self.pad_h, self.pad_w),
-            #                        (self.stride_h, self.stride_w))
-
-            # # TODO: Add support for group > 1
-            # for g in range(self.group):
-            #     self.gemm(self.weights, g * self.weight_offset,
-            #               col_data, g * self.col_offset,
-            #               top_data, g * self.output_offset,
-            #               self.conv_out_channels // self.group,
-            #               self.conv_out_spatial_dim,
-            #               self.kernel_dim // self.group)
-            # top_data.copy_to_host_if_dirty()
 
             if self.bias_term:
                 for index, b in enumerate(self.bias):

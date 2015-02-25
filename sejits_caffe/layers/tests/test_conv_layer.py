@@ -113,29 +113,28 @@ class ConvLayerTest(unittest.TestCase):
         conv.set_up(hmarray(in_batch), actual)
         conv.forward(hmarray(in_batch), actual)
         expected_conv(in_batch, conv.weights, conv.bias, expected)
-        actual.copy_to_host_if_dirty()
         self._check(actual, expected)
 
     def test_simple_layer(self):
         self._forward_test('cpu', self.layers[0], (1, 3, 128, 128))
         self._forward_test('gpu', self.layers[0], (1, 3, 128, 128))
 
-    # def test_alex_net_conv1(self):
-    #     self._forward_test('cpu', self.layers[1], (1, 3, 128, 128))
-    #     self._forward_test('gpu', self.layers[1], (1, 3, 128, 128))
+    def test_alex_net_conv1(self):
+        self._forward_test('cpu', self.layers[1], (1, 3, 128, 128))
+        self._forward_test('gpu', self.layers[1], (1, 3, 128, 128))
 
-    # def test_alex_net_conv2(self):
-    #     self._forward_test('cpu', self.layers[2], (1, 16, 64, 64))
-    #     self._forward_test('gpu', self.layers[2], (1, 16, 64, 64))
+    def test_alex_net_conv2(self):
+        self._forward_test('cpu', self.layers[2], (1, 16, 64, 64))
+        self._forward_test('gpu', self.layers[2], (1, 16, 64, 64))
 
-    # def test_alex_net_conv3(self):
-    #     self._forward_test('cpu', self.layers[3], (1, 4, 64, 64))
-    #     self._forward_test('gpu', self.layers[3], (1, 4, 64, 64))
+    def test_alex_net_conv3(self):
+        self._forward_test('cpu', self.layers[3], (1, 4, 64, 64))
+        self._forward_test('gpu', self.layers[3], (1, 4, 64, 64))
 
-    # def test_alex_net_conv4(self):
-    #     self._forward_test('cpu', self.layers[4], (1, 8, 64, 64))
-    #     self._forward_test('gpu', self.layers[4], (1, 8, 64, 64))
+    def test_alex_net_conv4(self):
+        self._forward_test('cpu', self.layers[4], (1, 8, 64, 64))
+        self._forward_test('gpu', self.layers[4], (1, 8, 64, 64))
 
-    # def test_alex_net_conv5(self):
-    #     self._forward_test('cpu', self.layers[5], (1, 8, 64, 64))
-    #     self._forward_test('gpu', self.layers[5], (1, 8, 64, 64))
+    def test_alex_net_conv5(self):
+        self._forward_test('cpu', self.layers[5], (1, 8, 64, 64))
+        self._forward_test('gpu', self.layers[5], (1, 8, 64, 64))
