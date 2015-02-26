@@ -5,6 +5,7 @@ __pycache__
 .idea
 .swp
 *.sublime-project
+*.sublime-workspace
 venv
 .venv
 compiled

@@ -2,6 +2,7 @@ from ctree.frontend import get_ast
 from ctree.jit import LazySpecializedFunction, ConcreteSpecializedFunction
 from collections import namedtuple
 from ctree.transformations import PyBasicConversions
+from ctree.transforms import ConstantFold
 import ctree.c.nodes as C
 from ctree.nodes import Project
 import ctypes as ct
@@ -12,14 +13,6 @@ import numpy as np
 
 arr_cfg = namedtuple('arr_cfg', ['shape', 'dtype'])
 tuple_cfg = namedtuple('tuple_cfg', ['val'])
-
-
-op_map = {
-    C.Op.Add: lambda x, y: x + y,
-    C.Op.Div: lambda x, y: x / y,
-    C.Op.Lt: lambda x, y: x < y,
-    C.Op.Sub: lambda x, y: x - y,
-}
 
 
 class Backend(ast.NodeTransformer):
@@ -90,40 +83,6 @@ class Backend(ast.NodeTransformer):
             )
         return curr
 
-    def fold_add(self, node):
-        if isinstance(node.left, C.Constant) and node.left.value == 0:
-            return node.right
-        elif isinstance(node.right, C.Constant) and node.right.value == 0:
-            return node.left
-        return node
-
-    def fold_sub(self, node):
-        if isinstance(node.left, C.Constant) and node.left.value == 0:
-            return C.Op.SubUnary(node.right)
-        elif isinstance(node.right, C.Constant) and node.right.value == 0:
-            return node.left
-        return node
-
-    def fold_mul(self, node):
-        if isinstance(node.left, C.Constant) and node.left.value == 1:
-            return node.right
-        elif isinstance(node.right, C.Constant) and node.right.value == 1:
-            return node.left
-        return node
-
-    def constant_fold(self, node):
-        if isinstance(node.left, C.Constant) and \
-                isinstance(node.right, C.Constant):
-            return C.Constant(op_map[node.op.__class__](
-                node.left.value, node.right.value))
-        elif isinstance(node.op, C.Op.Add):
-            return self.fold_add(node)
-        elif isinstance(node.op, C.Op.Sub):
-            return self.fold_sub(node)
-        elif isinstance(node.op, C.Op.Mul):
-            return self.fold_mul(node)
-        return node
-
     def visit_BinaryOp(self, node):
         if isinstance(node.op, C.Op.ArrayRef):
             if isinstance(node.left, C.SymbolRef):
@@ -145,10 +104,10 @@ class Backend(ast.NodeTransformer):
                     raise NotImplementedError()
         node.left = self.visit(node.left)
         node.right = self.visit(node.right)
-        return self.constant_fold(node)
+        return node
 
 
-class ConcreteStructuredGrid(ConcreteSpecializedFunction):
+class ConcreteFn(ConcreteSpecializedFunction):
     def __init__(self, entry_name, proj, entry_type):
         self._c_function = self._compile(entry_name, proj, entry_type)
 
@@ -159,7 +118,7 @@ class ConcreteStructuredGrid(ConcreteSpecializedFunction):
         return self._c_function(*a)
 
 
-class SpecializedStructuredGrid(LazySpecializedFunction):
+class SpecializedFn(LazySpecializedFunction):
     def args_to_subconfig(self, args, kwargs):
         arg_cfg = ()
         for arg in args:
@@ -180,6 +139,7 @@ class SpecializedStructuredGrid(LazySpecializedFunction):
         arg_cfg, tune_cfg = program_cfg
         tree = PyBasicConversions().visit(tree)
         tree = Backend(arg_cfg).visit(tree)
+        tree = ConstantFold().visit(tree)
         return tree
 
     def finalize(self, files, program_cfg):
@@ -191,16 +151,15 @@ class SpecializedStructuredGrid(LazySpecializedFunction):
                                                       len(cfg.shape),
                                                       cfg.shape), )
         entry_type = ct.CFUNCTYPE(*entry_type)
-        return ConcreteStructuredGrid('convolution_2d',
-                                      Project(files),
-                                      entry_type)
+        return ConcreteFn('convolution_2d',
+                          Project(files), entry_type)
 
 
-def structured_grid(fn):
-    return SpecializedStructuredGrid(get_ast(fn))
+def jit(fn):
+    return SpecializedFn(get_ast(fn))
 
 
-@structured_grid
+@jit
 def convolution_2d(data, weights, output, padding=(0, 0), stride=(1, 1)):
     for y, x in output.indices():
         for j, i in weights.indices():
