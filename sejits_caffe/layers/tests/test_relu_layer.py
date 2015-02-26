@@ -11,6 +11,8 @@ param = caffe_pb2.NetParameter()
 param_string = open(path + '/test.prototxt').read()
 text_format.Merge(param_string, param)
 
+
+@unittest.skip("Need to update")
 class ReluLayerTest(unittest.TestCase):
     def _check(self, actual, expected):
         try:

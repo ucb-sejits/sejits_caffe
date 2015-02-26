@@ -1,14 +1,14 @@
 from .base_layer import BaseLayer
 import numpy as np
 import logging
-from sejits_caffe.util.im2col import cpu_im2col, gpu_im2col
+# from sejits_caffe.util.im2col import cpu_im2col, gpu_im2col
 from hindemith import hmarray
 from hindemith.types.hmarray import EltWiseArrayOp
 EltWiseArrayOp.backend = 'c'
 # from hindemith.operations.gemm import gemm
-import ctypes
-from ctypes import c_int, c_float, c_size_t
-from sejits_caffe.operations import convolution_2d
+# import ctypes
+# from ctypes import c_int, c_float, c_size_t
+from sejits_caffe.operations import convolution_2d, jit
 """
 import pycl as cl
 import os
@@ -73,8 +73,10 @@ def gpu_gemm(A, A_offset, B, B_offset, C, C_offset, m, n, k):
 class ConvLayer(BaseLayer):
     backend = 'gpu'
 
-    def set_up(self, bottom, top):
-        conv_param = self.layer_param.convolution_param
+    def __init__(self, param):
+        super(ConvLayer, self).__init__(param)
+
+        conv_param = param.convolution_param
 
         if conv_param.kernel_size:
             self.kernel_h = conv_param.kernel_size
@@ -93,34 +95,33 @@ class ConvLayer(BaseLayer):
 
         assert conv_param.num_output > 0, "Layer must have at least one output"
 
+        self.group = conv_param.group
+
+        self.conv_out_channels = None
+        self.conv_in_channels = None
+        self.conv_in_height = None
+        self.conv_in_width = None
+        self.conv_out_spatial_dim = None
+        self.kernel_dim = None
+        self.weight_offset = None
+        self.col_offset = None
+        self.output_offset = None
+        self.weights = None
+        self.bias_term = None
+        self.bias = None
+
+    def set_up(self, bottom, top):
+        conv_param = self.layer_param.convolution_param
+
         channels, height, width = bottom[0].shape
         num_output = conv_param.num_output
-        self.group = conv_param.group
         assert channels % self.group == 0, \
             "Number of channels should be a multiple of group."
         assert num_output % self.group == 0, \
             "Number of outputs should be a multiple of group."
 
-        self.height_out = (height + 2 * self.pad_h - self.kernel_h) // \
-            self.stride_h + 1
-        self.width_out = (width + 2 * self.pad_w - self.kernel_w) // \
-            self.stride_w + 1
-
-        self.conv_out_channels = num_output
-        self.conv_in_channels = channels
-        self.conv_in_height = height
-        self.conv_in_width = width
-        self.conv_out_spatial_dim = self.height_out * self.width_out
-        self.kernel_dim = self.conv_in_channels * self.kernel_h * self.kernel_w
-        self.weight_offset = self.conv_out_channels * self.kernel_dim // self.group \
-            // self.group
-        self.col_offset = self.kernel_dim * self.conv_out_spatial_dim // \
-            self.group
-        self.output_offset = self.conv_out_channels * self.conv_out_spatial_dim \
-            // self.group
-
         self.bias_term = conv_param.bias_term
-        if hasattr(self, 'weights'):
+        if self.weights is not None:
             logging.debug("Skipping parameter initialization")
         else:
             weights_shape = (num_output, channels // self.group,
@@ -144,24 +145,18 @@ class ConvLayer(BaseLayer):
                     raise Exception("Filler not implemented for bias filler \
                         type {}".format(filler.type))
 
-        # if self.backend == 'gpu':
-        #     self.gemm = gpu_gemm
-        #     self.im2col = gpu_im2col
-        # elif self.backend == 'cpu':
-        #     self.gemm = cpu_gemm
-        #     self.im2col = cpu_im2col
-
     def forward(self, bottom, top):
-	out_groups = top.shape[1] // self.group
-	in_groups = bottom.shape[1] // self.group
+        out_groups = top.shape[1] // self.group
+        in_groups = bottom.shape[1] // self.group
         for bottom_data, top_data in zip(bottom, top):
             for group in range(self.group):
                 for out_group in range(0, out_groups):
                     for in_group in range(0, in_groups):
                         convolution_2d(
-                            bottom_data[in_group + group * in_groups], 
-                            self.weights[out_group + group * out_groups, in_group],
-                            top_data[out_group + group * out_groups], 
+                            bottom_data[in_group + group * in_groups],
+                            self.weights[out_group + group * out_groups,
+                                         in_group],
+                            top_data[out_group + group * out_groups],
                             (self.pad_h, self.pad_w),
                             (self.stride_h, self.stride_w))
 
@@ -169,7 +164,8 @@ class ConvLayer(BaseLayer):
                 for index, b in enumerate(self.bias):
                     top_data[index] += b
 
-    # def backward(self, top, propagate_down, bottom):
+    def backward(self, top, propagate_down, bottom):
+        pass
     #     weight = None
     #     weight_diff = None
     #     if self.param_propagate_down[0]:
