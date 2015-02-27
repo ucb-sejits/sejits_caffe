@@ -206,6 +206,7 @@ class SpecializedFn(LazySpecializedFunction):
         tree = Backend(arg_cfg).visit(tree)
         tree = ConstantFold().visit(tree)
         tree = CacheBlockLoopNests().visit(tree)
+        print(tree)
         return tree
 
     def finalize(self, files, program_cfg):

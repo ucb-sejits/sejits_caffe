@@ -50,5 +50,5 @@ class MetaSpecialized(LazySpecializedFunction):
 
 def meta(fn):
     tree = get_ast(fn)
-    tree = PyBasicConversions().visit(tree)
+    # tree = PyBasicConversions().visit(tree)
     return fn
