@@ -1,9 +1,9 @@
 from sejits_caffe.layers.conv_layer import ConvLayer
+from sejits_caffe.types import Array
 import numpy as np
 import sejits_caffe.caffe_pb2 as caffe_pb2
 from google.protobuf import text_format
 import os
-from hindemith.types.hmarray import hmarray
 import unittest
 from ctree.jit import LazySpecializedFunction, ConcreteSpecializedFunction
 from ctree.c.nodes import CFile, Constant
@@ -106,12 +106,12 @@ class ConvLayerTest(unittest.TestCase):
         conv = ConvLayer(param)
         expected_conv = NaiveConv(conv_param)
         conv.backend = backend
-        actual = hmarray(np.zeros(actual_shape, np.float32))
-        expected = np.zeros(expected_shape, np.float32)
-        in_batch = np.random.rand(*in_shape).astype(np.float32) * 255
+        actual = Array.zeros(actual_shape, np.float32)
+        expected = Array.zeros(expected_shape, np.float32)
+        in_batch = Array.rand(*in_shape).astype(np.float32) * 255
 
-        conv.set_up(hmarray(in_batch), actual)
-        conv.forward(hmarray(in_batch), actual)
+        conv.set_up(in_batch, actual)
+        conv.forward(in_batch, actual)
         expected_conv(in_batch, conv.weights, conv.bias, expected)
         self._check(actual, expected)
 
@@ -120,8 +120,8 @@ class ConvLayerTest(unittest.TestCase):
         self._forward_test('gpu', self.layers[0], (1, 3, 128, 128))
 
     def test_alex_net_conv1(self):
-        self._forward_test('cpu', self.layers[1], (1, 3, 128, 128))
-        self._forward_test('gpu', self.layers[1], (1, 3, 128, 128))
+        self._forward_test('cpu', self.layers[1], (5, 3, 256, 256))
+        self._forward_test('gpu', self.layers[1], (5, 3, 256, 256))
 
     def test_alex_net_conv2(self):
         self._forward_test('cpu', self.layers[2], (1, 16, 64, 64))

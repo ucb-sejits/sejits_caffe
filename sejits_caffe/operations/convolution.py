@@ -4,12 +4,15 @@ from collections import namedtuple
 from ctree.transformations import PyBasicConversions
 from ctree.transforms import ConstantFold
 import ctree.c.nodes as C
+from ctree.templates.nodes import StringTemplate
 from ctree.nodes import Project
 import ctypes as ct
 import ast
 
-from hindemith import hmarray
+from sejits_caffe.types import Array
+
 import numpy as np
+import ctree.np
 
 arr_cfg = namedtuple('arr_cfg', ['shape', 'dtype'])
 tuple_cfg = namedtuple('tuple_cfg', ['val'])
@@ -107,6 +110,68 @@ class Backend(ast.NodeTransformer):
         return node
 
 
+class CacheBlockLoopNests(ast.NodeTransformer):
+    def __init__(self):
+        super(CacheBlockLoopNests, self).__init__()
+        self.block_factor = 32
+        self.inside_nest = False
+        self.nest = []
+
+    def gen_nest(self):
+        ret_node = self.nest[0]
+        curr_node = ret_node
+        for node in self.nest[1:-1]:
+            curr_node.body[0] = node
+            curr_node = node
+        return ret_node
+
+    def visit_CFile(self, node):
+        node.body = [self.visit(s) for s in node.body]
+        node.body.insert(0, StringTemplate("#include <math.h>"))
+        return node
+
+    def block_loop(self, node):
+        loopvar = node.init.left.name
+        loopvar += loopvar
+        self.nest.insert(
+            0,
+            C.For(
+                C.Assign(C.SymbolRef(loopvar, node.init.left.type),
+                         node.init.right),
+                C.Lt(C.SymbolRef(loopvar), node.test.right),
+                C.AddAssign(C.SymbolRef(loopvar),
+                            C.Constant(self.block_factor)),
+                [None]
+            )
+        )
+        node.init.right = C.SymbolRef(loopvar)
+        node.test.right = C.FunctionCall(
+            C.SymbolRef("fmin"),
+            [C.Add(C.SymbolRef(loopvar),
+                   C.Constant(self.block_factor)),
+             node.test.right])
+
+    def visit_For(self, node):
+        start = node.init.right.value
+        end = node.test.right.value
+        if end - start < self.block_factor:
+            return node
+        elif self.inside_nest:
+            self.nest.append(node)
+            if isinstance(node.body[0], C.For):
+                self.visit(node.body[0])
+            self.block_loop(node)
+        else:
+            if isinstance(node.body[0], C.For):
+                self.inside_nest = True
+                self.nest.append(node)
+                self.visit(node.body[0])
+                self.block_loop(node)
+                return self.gen_nest()
+            else:
+                return node
+
+
 class ConcreteFn(ConcreteSpecializedFunction):
     def __init__(self, entry_name, proj, entry_type):
         self._c_function = self._compile(entry_name, proj, entry_type)
@@ -122,7 +187,7 @@ class SpecializedFn(LazySpecializedFunction):
     def args_to_subconfig(self, args, kwargs):
         arg_cfg = ()
         for arg in args:
-            if isinstance(arg, hmarray):
+            if isinstance(arg, Array):
                 arg_cfg += (arr_cfg(arg.shape, arg.dtype), )
             elif isinstance(arg, tuple):
                 arg_cfg += (arg, )
@@ -140,6 +205,8 @@ class SpecializedFn(LazySpecializedFunction):
         tree = PyBasicConversions().visit(tree)
         tree = Backend(arg_cfg).visit(tree)
         tree = ConstantFold().visit(tree)
+        tree = CacheBlockLoopNests().visit(tree)
+        print(tree)
         return tree
 
     def finalize(self, files, program_cfg):
@@ -155,15 +222,15 @@ class SpecializedFn(LazySpecializedFunction):
                           Project(files), entry_type)
 
 
-def jit(fn):
+def specialize(fn):
     return SpecializedFn(get_ast(fn))
 
 
-@jit
+@specialize
 def convolution_2d(data, weights, output, padding=(0, 0), stride=(1, 1)):
     for y, x in output.indices():
         for j, i in weights.indices():
-            yy = y * stride[0] - padding[0] + j
-            xx = x * stride[1] - padding[1] + i
-            if 0 <= yy < data.shape[0] and 0 <= xx < data.shape[1]:
-                output[y, x] += weights[j, i] * data[yy, xx]
+            y_in = y * stride[0] - padding[0] + j
+            x_in = x * stride[1] - padding[1] + i
+            if 0 <= y_in < data.shape[0] and 0 <= x_in < data.shape[1]:
+                output[y, x] += weights[j, i] * data[y_in, x_in]

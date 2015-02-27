@@ -2,13 +2,13 @@ from .base_layer import BaseLayer
 import numpy as np
 import logging
 # from sejits_caffe.util.im2col import cpu_im2col, gpu_im2col
-from hindemith import hmarray
-from hindemith.types.hmarray import EltWiseArrayOp
-EltWiseArrayOp.backend = 'c'
+from sejits_caffe.operations import convolution_2d, meta
+from sejits_caffe.types import Array
+
 # from hindemith.operations.gemm import gemm
 # import ctypes
 # from ctypes import c_int, c_float, c_size_t
-from sejits_caffe.operations import convolution_2d, jit
+
 """
 import pycl as cl
 import os
@@ -128,16 +128,14 @@ class ConvLayer(BaseLayer):
                              self.kernel_h, self.kernel_w)
             weight_filler = conv_param.weight_filler
             if weight_filler.type == 'gaussian':
-                self.weights = hmarray(
-                    weight_filler.mean + weight_filler.std *
-                    np.random.standard_normal(
-                        weights_shape).astype(np.float32))
-                self.weights._ocl_dirty = True
+                self.weights = weight_filler.mean + weight_filler.std * \
+                    Array.standard_normal(
+                        weights_shape).astype(np.float32)
             else:
                 raise Exception("Filler not implemented for weight filler \
                     type {}".format(weight_filler.type))
             if self.bias_term:
-                self.bias = np.ndarray((num_output, ), np.float32)
+                self.bias = Array((num_output, ), np.float32)
                 filler = conv_param.bias_filler
                 if filler.type == 'constant':
                     self.bias.fill(filler.value)
@@ -145,6 +143,7 @@ class ConvLayer(BaseLayer):
                     raise Exception("Filler not implemented for bias filler \
                         type {}".format(filler.type))
 
+    @meta
     def forward(self, bottom, top):
         out_groups = top.shape[1] // self.group
         in_groups = bottom.shape[1] // self.group
