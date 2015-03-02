@@ -133,7 +133,7 @@ class ConvLayer(BaseLayer):
                 raise Exception("Filler not implemented for weight filler \
                     type {}".format(weight_filler.type))
             if self.bias_term:
-                self.bias = Array((num_output,),
+                self.bias = Array((num_output, top.shape[-2], top.shape[-1]),
                                   np.float32)
                 filler = conv_param.bias_filler
                 if filler.type == 'constant':
