@@ -118,6 +118,7 @@ class CacheBlockLoopNests(ast.NodeTransformer):
 
     def gen_nest(self):
         ret_node = self.nest[0]
+        ret_node.pragma = 'omp parallel for'
         curr_node = ret_node
         for node in self.nest[1:-1]:
             curr_node.body[0] = node

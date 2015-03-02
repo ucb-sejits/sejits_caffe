@@ -195,7 +195,6 @@ class InlineEnvironment(ast.NodeTransformer):
 
         if self.table_contains(node.func):
             fn = self.eval_in_table(node.func)
-            print(fn)
             params = []
             args = []
             for arg in node.args:
@@ -277,6 +276,7 @@ class MetaSpecialized(LazySpecializedFunction):
         for file in inliner.files:
             body.extend(file.body)
         tree.body = body + tree.body
+        print(tree)
         return [tree]
 
     def finalize(self, files, program_cfg):
