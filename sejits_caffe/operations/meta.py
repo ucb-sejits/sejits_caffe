@@ -66,16 +66,20 @@ class InlineEnvironment(ast.NodeTransformer):
         node.defn = [self.visit(s) for s in node.body]
         new_params = []
         for param in node.args.args:
-            if param.id == 'self':
+            if sys.version_info > (3, 0):
+                _id = param.arg
+            else:
+                _id = param.id
+            if _id == 'self':
                 continue
-            value = self.symbol_table[param.id]
+            value = self.symbol_table[_id]
             if isinstance(value, Array):
                 _type = np.ctypeslib.ndpointer(
                     value.dtype, value.ndim, value.shape)()
             else:
                 _type = get_ctype(value)
             new_params.append(
-                C.SymbolRef(param.id, _type))
+                C.SymbolRef(_id, _type))
         for name, value in self.decls.items():
             if isinstance(value, Array):
                 type = np.ctypeslib.ndpointer(
@@ -241,7 +245,11 @@ class ConcreteMeta(ConcreteSpecializedFunction):
                 a.append(getattr(_self, param.name[5:]))
             else:
                 for i, arg in enumerate(self.original_args):
-                    if arg.id == param.name:
+                    if sys.version_info > (3, 0):
+                        _id = arg.arg
+                    else:
+                        _id = arg.id
+                    if _id == param.name:
                         a.append(args[i])
                         break
         return self._c_function(*a)
@@ -290,7 +298,11 @@ class MetaSpecialized(LazySpecializedFunction):
             else:
                 for index, p in enumerate(
                         self.original_tree.body[0].args.args):
-                    if p.id == param.name:
+                    if sys.version_info > (3, 0):
+                        _id = p.arg
+                    else:
+                        _id = p.id
+                    if _id == param.name:
                         arg = arg_cfg[index]
                         break
 
