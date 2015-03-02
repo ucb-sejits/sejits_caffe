@@ -10,16 +10,27 @@ from ctree.templates.nodes import StringTemplate
 from ctree.nodes import Project
 import ctypes as ct
 import ast
+import inspect
+import ctree.np
 
 arr_cfg = namedtuple('arr_cfg', ['shape', 'dtype'])
 tuple_cfg = namedtuple('tuple_cfg', ['val'])
 
 
 class Backend(ast.NodeTransformer):
-    def __init__(self, arg_cfg):
+    def __init__(self, arg_cfg, symbol_table):
+        self.symbol_table = symbol_table
         self.arg_cfg = arg_cfg
         self.cfg_dict = {}
         self.loop_shape_map = {}
+        self.defns = []
+
+    def visit_CFile(self, node):
+        self.defns = []
+        node = super(Backend, self).generic_visit(node)
+        for defn in self.defns:
+            node.body.insert(0, defn)
+        return node
 
     def visit_FunctionDecl(self, node):
         params = []
@@ -91,8 +102,8 @@ class Backend(ast.NodeTransformer):
                 target = node.left.name
                 if target in self.cfg_dict:
                     target = self.cfg_dict[target]
-                    if type(target) in {int, float}:
-                        return C.Constant(target)
+                    # if type(target) in {int, float}:
+                    #     return C.Constant(target)
                     loopvars = tuple(var.name for var in node.right.elts)
                     node.right = self.gen_loop_index(
                         loopvars, target.shape)
@@ -108,6 +119,19 @@ class Backend(ast.NodeTransformer):
         node.right = self.visit(node.right)
         return node
 
+    def visit_FunctionCall(self, node):
+        # FIXME: This is specific for handling a map function
+        # do we have to generalize?
+        node = super(Backend, self).generic_visit(node)
+        func_tree = get_ast(self.symbol_table[node.func.name])
+        func_tree = PyBasicConversions().visit(func_tree).body[0]
+        func_tree.name = C.SymbolRef(node.func.name)
+        self.defns.append(func_tree)
+        # FIXME: Infer type
+        func_tree.params[0].type = ct.c_float()
+        func_tree.return_type = ct.c_float()
+        return node
+
 
 class CacheBlockLoopNests(ast.NodeTransformer):
     def __init__(self):
@@ -118,7 +142,7 @@ class CacheBlockLoopNests(ast.NodeTransformer):
 
     def gen_nest(self):
         ret_node = self.nest[0]
-        ret_node.pragma = 'omp parallel for'
+        ret_node.pragma = 'omp for'
         curr_node = ret_node
         for node in self.nest[1:-1]:
             curr_node.body[0] = node
@@ -184,6 +208,10 @@ class ConcreteFn(ConcreteSpecializedFunction):
 
 
 class SpecializedFn(LazySpecializedFunction):
+    def __init__(self, tree, symbol_table):
+        super(SpecializedFn, self).__init__(tree)
+        self.symbol_table = symbol_table
+
     def args_to_subconfig(self, args, kwargs):
         arg_cfg = ()
         for arg in args:
@@ -203,9 +231,10 @@ class SpecializedFn(LazySpecializedFunction):
     def transform(self, tree, program_cfg):
         arg_cfg, tune_cfg = program_cfg
         tree = PyBasicConversions().visit(tree)
-        tree = Backend(arg_cfg).visit(tree)
+        tree = Backend(arg_cfg, self.symbol_table).visit(tree)
         tree = ConstantFold().visit(tree)
-        tree = CacheBlockLoopNests().visit(tree)
+        # tree = CacheBlockLoopNests().visit(tree)
+        tree.name = self.original_tree.body[0].name
         return tree
 
     def finalize(self, files, program_cfg):
@@ -216,17 +245,54 @@ class SpecializedFn(LazySpecializedFunction):
                 entry_type += (np.ctypeslib.ndpointer(cfg.dtype,
                                                       len(cfg.shape),
                                                       cfg.shape), )
+            elif isinstance(cfg, np.float32):
+                entry_type += (ct.c_float, )
+            else:
+                raise NotImplementedError()
         entry_type = ct.CFUNCTYPE(*entry_type)
-        return ConcreteFn('convolution_2d',
+        return ConcreteFn(files[0].name,
                           Project(files), entry_type)
 
 
 def specialize(fn):
-    spec_fn = SpecializedFn(get_ast(fn))
+
+    frame = inspect.stack()[1][0]
+    symbol_table = frame.f_locals
+    # FIXME: symbol_table prints out a huge dict, why??
+
+    spec_fn = SpecializedFn(get_ast(fn), symbol_table)
 
     def fn(*args, **kwargs):
         return spec_fn(*args, **kwargs)
     fn._specializer = spec_fn
+    return fn
+
+
+class SpecializedDispatch(object):
+    def __init__(self, fn):
+        self.fn = fn
+
+    def __call__(self, *args, **kwargs):
+        return self.fn(*args, **kwargs)(*args, **kwargs)
+
+
+@specialize
+def array_array_add(a, b, output):
+    for y, x in output.indices():
+        output[y, x] = a[y, x] + b[y, x]
+
+
+@specialize
+def array_scalar_add(a, b, output):
+    for y, x in output.indices():
+        output[y, x] = a[y, x] + b
+
+
+def smap(func):
+    @specialize
+    def fn(a, output):
+        for y, x in output.indices():
+            output[y, x] = func(a[y, x])
     return fn
 
 
@@ -248,7 +314,10 @@ class Array(np.ndarray):
         return np.empty_like(*args, **kwargs)
 
     @staticmethod
-    @specialize
+    @SpecializedDispatch
     def add(a, b, output):
-        for y, x in output.indices():
-            output[y, x] = a[y, x] + b[y, x]
+        if isinstance(a, Array) and isinstance(b, Array):
+            return array_array_add
+        elif isinstance(a, Array) and type(b) in {np.float32}:
+            return array_scalar_add
+        raise NotImplementedError()

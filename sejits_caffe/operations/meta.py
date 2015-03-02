@@ -12,6 +12,7 @@ import ctree.c.nodes as C
 from ctree.types import get_ctype
 import ctree.np
 from sejits_caffe.types import Array
+from sejits_caffe.types.array import SpecializedDispatch
 import numpy as np
 import ctypes as ct
 from collections import namedtuple
@@ -219,10 +220,15 @@ class InlineEnvironment(ast.NodeTransformer):
                         params.append(self.decls[arg.name])
                     else:
                         raise NotImplementedError(arg)
+            if isinstance(fn, SpecializedDispatch):
+                print(params)
+                fn = fn.fn(*params)
             cfg = fn._specializer.get_program_config(params, {})
             dir_name = fn._specializer.config_to_dirname(cfg)
             result = fn._specializer.get_transform_result(
                 cfg, dir_name, cache=False)
+            result[0].body[-1].static = True
+            result[0].body[-1].inline = True
             self.files.extend(result)
             node.args = args
             node.func = ast.Name(result[0].body[-1].name, ast.Load())
@@ -279,6 +285,7 @@ class MetaSpecialized(LazySpecializedFunction):
         inliner = InlineEnvironment(self.symbol_table)
         tree = inliner.visit(tree)
         tree = PyBasicConversions().visit(tree)
+        tree.find(C.For).pragma = 'omp parallel'
         tree.name = self.original_tree.body[0].name
         body = []
         for file in inliner.files:

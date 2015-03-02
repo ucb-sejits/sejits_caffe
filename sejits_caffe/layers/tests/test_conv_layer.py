@@ -111,23 +111,28 @@ class ConvLayerTest(unittest.TestCase):
 
         conv.set_up(in_batch, actual)
         conv.forward(in_batch, actual)
+        conv.forward(in_batch, actual)
+        expected_conv(in_batch, conv.weights, conv.bias, expected)
         expected_conv(in_batch, conv.weights, conv.bias, expected)
         self._check(actual, expected)
 
     def test_simple_layer(self):
-        self._forward_test(self.layers[0], (1, 3, 128, 128))
+        self._forward_test(self.layers[0], (5, 3, 128, 128))
 
     def test_alex_net_conv1(self):
         self._forward_test(self.layers[1], (5, 3, 256, 256))
 
     def test_alex_net_conv2(self):
-        self._forward_test(self.layers[2], (1, 16, 64, 64))
+        self._forward_test(self.layers[2], (5, 16, 64, 64))
 
     def test_alex_net_conv3(self):
-        self._forward_test(self.layers[3], (1, 4, 64, 64))
+        self._forward_test(self.layers[3], (5, 4, 64, 64))
 
     def test_alex_net_conv4(self):
-        self._forward_test(self.layers[4], (1, 8, 64, 64))
+        self._forward_test(self.layers[4], (5, 8, 64, 64))
 
     def test_alex_net_conv5(self):
-        self._forward_test(self.layers[5], (1, 8, 64, 64))
+        self._forward_test(self.layers[5], (5, 8, 64, 64))
+
+if __name__ == '__main__':
+    unittest.main()
