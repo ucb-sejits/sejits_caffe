@@ -33,14 +33,16 @@ class Backend(ast.NodeTransformer):
         return node
 
     def visit_FunctionDecl(self, node):
-        params = []
         for param, cfg in zip(node.params, self.arg_cfg):
             if type(cfg) == arr_cfg:
                 param.type = np.ctypeslib.ndpointer(cfg.dtype, len(cfg.shape),
                                                     cfg.shape)()
-                params.append(param)
+            elif type(cfg) == int:
+                param.type = ct.c_int()
+            else:
+                # TODO: Generalize type inference or add support for all types
+                raise NotImplementedError()
             self.cfg_dict[param.name] = cfg
-        node.params = params
         node.defn = list(map(self.visit, node.defn))
         return node
 
@@ -92,8 +94,8 @@ class Backend(ast.NodeTransformer):
         return curr
 
     def visit_SymbolRef(self, node):
-        if node.name in self.cfg_dict:
-            return C.Constant(self.cfg_dict[node.name])
+        # if node.name in self.cfg_dict:
+        #     return C.Constant(self.cfg_dict[node.name])
         return node
 
     def visit_BinaryOp(self, node):
@@ -247,6 +249,8 @@ class SpecializedFn(LazySpecializedFunction):
                                                       cfg.shape), )
             elif isinstance(cfg, np.float32):
                 entry_type += (ct.c_float, )
+            elif isinstance(cfg, int):
+                entry_type += (ct.c_int, )
             else:
                 raise NotImplementedError()
         entry_type = ct.CFUNCTYPE(*entry_type)

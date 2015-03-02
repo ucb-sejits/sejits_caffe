@@ -220,6 +220,7 @@ class InlineEnvironment(ast.NodeTransformer):
                         params.append(self.decls[arg.name])
                     else:
                         raise NotImplementedError(arg)
+                    args.append(arg)
             if isinstance(fn, SpecializedDispatch):
                 print(params)
                 fn = fn.fn(*params)
