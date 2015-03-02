@@ -71,8 +71,6 @@ def gpu_gemm(A, A_offset, B, B_offset, C, C_offset, m, n, k):
 
 
 class ConvLayer(BaseLayer):
-    backend = 'gpu'
-
     def __init__(self, param):
         super(ConvLayer, self).__init__(param)
 
@@ -135,7 +133,8 @@ class ConvLayer(BaseLayer):
                 raise Exception("Filler not implemented for weight filler \
                     type {}".format(weight_filler.type))
             if self.bias_term:
-                self.bias = Array((num_output, ), np.float32)
+                self.bias = Array((num_output, top.shape[-2], top.shape[-1]),
+                                  np.float32)
                 filler = conv_param.bias_filler
                 if filler.type == 'constant':
                     self.bias.fill(filler.value)
@@ -147,21 +146,23 @@ class ConvLayer(BaseLayer):
     def forward(self, bottom, top):
         out_groups = top.shape[1] // self.group
         in_groups = bottom.shape[1] // self.group
-        for bottom_data, top_data in zip(bottom, top):
+        for i in range(len(top)):
             for group in range(self.group):
-                for out_group in range(0, out_groups):
-                    for in_group in range(0, in_groups):
+                for out_group in range(out_groups):
+                    for in_group in range(in_groups):
                         convolution_2d(
-                            bottom_data[in_group + group * in_groups],
+                            bottom[i, in_group + group * in_groups],
                             self.weights[out_group + group * out_groups,
                                          in_group],
-                            top_data[out_group + group * out_groups],
-                            (self.pad_h, self.pad_w),
-                            (self.stride_h, self.stride_w))
+                            top[i, out_group + group * out_groups],
+                            self.pad_h, self.pad_w,
+                            self.stride_h, self.stride_w)
 
             if self.bias_term:
-                for index, b in enumerate(self.bias):
-                    top_data[index] += b
+                for j in range(len(self.bias)):
+                    # TODO: Add support for sugar
+                    # top[i, j] += self.bias[j]
+                    Array.add(top[i, j], self.bias[j], top[i, j])
 
     def backward(self, top, propagate_down, bottom):
         pass
