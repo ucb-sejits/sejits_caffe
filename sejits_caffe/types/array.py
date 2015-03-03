@@ -93,8 +93,9 @@ class Backend(ast.NodeTransformer):
         return curr
 
     def visit_SymbolRef(self, node):
-        # if node.name in self.cfg_dict:
-        #     return C.Constant(self.cfg_dict[node.name])
+        if node.name in self.symbol_table:
+            print(node.name, self.symbol_table[node.name])
+            return C.Constant(self.symbol_table[node.name])
         return node
 
     def visit_BinaryOp(self, node):
@@ -123,7 +124,7 @@ class Backend(ast.NodeTransformer):
     def visit_FunctionCall(self, node):
         # FIXME: This is specific for handling a map function
         # do we have to generalize?
-        node = super(Backend, self).generic_visit(node)
+        node.args = [self.visit(arg) for arg in node.args]
         func_tree = get_ast(self.symbol_table[node.func.name])
         func_tree = PyBasicConversions().visit(func_tree).body[0]
         func_tree.name = C.SymbolRef(node.func.name)
@@ -274,9 +275,13 @@ def specialize(fn):
 class SpecializedDispatch(object):
     def __init__(self, fn):
         self.fn = fn
+        self.num_args = False
 
     def __call__(self, *args, **kwargs):
-        return self.fn(*args, **kwargs)(*args, **kwargs)
+        trimmed_args = args
+        if self.num_args:
+            trimmed_args = args[:self.num_args]
+        return self.fn(*args, **kwargs)(*trimmed_args, **kwargs)
 
 
 @specialize

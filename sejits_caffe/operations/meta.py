@@ -216,12 +216,23 @@ class InlineEnvironment(ast.NodeTransformer):
                     arg = self.visit(arg)
                     if isinstance(arg, C.SymbolRef):
                         params.append(self.decls[arg.name])
-                    else:
-                        raise NotImplementedError(arg)
-                    args.append(arg)
+                        args.append(arg)
+                    elif isinstance(arg, ast.Tuple):
+                        elts = ()
+                        for elt in arg.elts:
+                            if isinstance(elt, C.SymbolRef):
+                                elts += (self.eval_in_table(elt), )
+                            else:
+                                elts += (elt, )
+                        params.append(elts)
             if isinstance(fn, SpecializedDispatch):
-                print(params)
+                if fn.num_args:
+                    trimmed = params[:fn.num_args]
+                else:
+                    trimmed = params
+                print(len(params))
                 fn = fn.fn(*params)
+                params = trimmed
             cfg = fn._specializer.get_program_config(params, {})
             dir_name = fn._specializer.config_to_dirname(cfg)
             result = fn._specializer.get_transform_result(

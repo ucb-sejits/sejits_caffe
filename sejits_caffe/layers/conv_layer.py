@@ -2,7 +2,7 @@ from .base_layer import BaseLayer
 import numpy as np
 import logging
 # from sejits_caffe.util.im2col import cpu_im2col, gpu_im2col
-from sejits_caffe.operations import convolution_2d, meta
+from sejits_caffe.operations import convolve, meta
 from sejits_caffe.types import Array
 
 # from hindemith.operations.gemm import gemm
@@ -151,13 +151,13 @@ class ConvLayer(BaseLayer):
             for group in range(self.group):
                 for out_group in range(out_groups):
                     for in_group in range(in_groups):
-                        convolution_2d(
+                        convolve(
                             bottom[i, in_group + group * in_groups],
                             self.weights[out_group + group * out_groups,
                                          in_group],
                             top[i, out_group + group * out_groups],
-                            self.pad_h, self.pad_w,
-                            self.stride_h, self.stride_w)
+                            (self.pad_h, self.pad_w),
+                            (self.stride_h, self.stride_w))
 
             if self.bias_term:
                 for j in range(len(self.bias)):
