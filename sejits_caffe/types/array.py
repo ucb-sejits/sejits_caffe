@@ -11,7 +11,6 @@ from ctree.nodes import Project
 import ctypes as ct
 import ast
 import inspect
-import ctree.np
 
 arr_cfg = namedtuple('arr_cfg', ['shape', 'dtype'])
 tuple_cfg = namedtuple('tuple_cfg', ['val'])

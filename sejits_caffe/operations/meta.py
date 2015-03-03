@@ -10,13 +10,11 @@ from ctree.nodes import Project
 import ast
 import ctree.c.nodes as C
 from ctree.types import get_ctype
-import ctree.np
 from sejits_caffe.types import Array
 from sejits_caffe.types.array import SpecializedDispatch
 import numpy as np
 import ctypes as ct
 from collections import namedtuple
-ctree.np
 
 arr_cfg = namedtuple('arr_cfg', ['shape', 'dtype'])
 
