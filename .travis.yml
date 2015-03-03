@@ -4,7 +4,7 @@ python:
   - '3.4'
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers # libboost-all-dev libatlas-base-dev
+  - sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers libprotobuf-dev # libboost-all-dev libatlas-base-dev
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       wget http://repo.continuum.io/miniconda/Miniconda-3.4.2-Linux-x86_64.sh -O miniconda.sh;
     else
@@ -19,7 +19,7 @@ before_install:
   - conda info -a
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy pip protobuf
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy pip
   - source activate test-environment
 install:
   - pip install coveralls coverage nose
