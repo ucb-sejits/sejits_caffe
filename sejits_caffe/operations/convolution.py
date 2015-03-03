@@ -21,7 +21,7 @@ convolution_cache = {}
 
 @SpecializedDispatch
 def convolve(data, weights, output, padding=(0, 0), stride=(1, 1)):
-    if (padding, weights) not in convolution_cache:
+    if (padding, stride) not in convolution_cache:
         convolution_cache[(padding, stride)] = \
             convolution_factory(padding, stride)
     return convolution_cache[(padding, stride)]

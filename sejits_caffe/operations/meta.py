@@ -230,7 +230,6 @@ class InlineEnvironment(ast.NodeTransformer):
                     trimmed = params[:fn.num_args]
                 else:
                     trimmed = params
-                print(len(params))
                 fn = fn.fn(*params)
                 params = trimmed
             cfg = fn._specializer.get_program_config(params, {})
