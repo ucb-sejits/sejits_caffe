@@ -12,6 +12,7 @@ import ctypes as ct
 import ast
 import inspect
 from functools import wraps
+import itertools
 
 arr_cfg = namedtuple('arr_cfg', ['shape', 'dtype'])
 tuple_cfg = namedtuple('tuple_cfg', ['val'])
@@ -75,12 +76,31 @@ class Backend(ast.NodeTransformer):
                 isinstance(node.iter.func, ast.Attribute) and
                 node.iter.func.attr == 'indices')
 
+    def process_loop_options(self, keywords, outer):
+        for key in keywords:
+            if key.arg == 'cache_block':
+                self.includes.add("math.h")
+                if not isinstance(key.value, ast.Name) or \
+                        key.value.id not in {'True', 'False'}:
+                    raise NotImplementedError(
+                        "Unsupported argument to cache_block " + ast.dump(key))
+                if key.value.id == 'True':
+                    outer = CacheBlockLoopNest().visit(outer)
+            elif key.arg == 'unroll':
+                pass
+            else:
+                raise NotImplementedError(
+                    "Unsupported keyword argument to indices " + ast.dump(key))
+        return outer
+
     def visit_For(self, node):
         if self.is_loop_by_index(node):
             cfg = self.cfg_dict[node.iter.func.value.id]
             loopvars = tuple(var.id for var in node.target.elts)
             outer, inner = self.gen_loop_nest(loopvars, cfg)
             inner.body = list(map(self.visit, node.body))
+            if node.iter.keywords:
+                outer = self.process_loop_options(node.iter.keywords, outer)
             return outer
 
         node.body = list(map(self.visit, node.body))
@@ -144,14 +164,14 @@ class Backend(ast.NodeTransformer):
         return node
 
 
-class CacheBlockLoopNests(ast.NodeTransformer):
+class CacheBlockLoopNest(ast.NodeTransformer):
     """
-    Transformer that cache blocks all loop nests it finds.
+    Transformer that cache block all loop nests it finds.
     TODO: Support for variable blocking factors.
     TODO: Tuning integration (handle variable sized nests?)
     """
     def __init__(self):
-        super(CacheBlockLoopNests, self).__init__()
+        super(CacheBlockLoopNest, self).__init__()
         self.block_factor = 32
         self.inside_nest = False
         self.nest = []
@@ -164,11 +184,6 @@ class CacheBlockLoopNests(ast.NodeTransformer):
             curr_node.body[0] = node
             curr_node = node
         return ret_node
-
-    def visit_CFile(self, node):
-        node.body = [self.visit(s) for s in node.body]
-        node.body.insert(0, StringTemplate("#include <math.h>"))
-        return node
 
     def block_loop(self, node):
         loopvar = node.init.left.name
@@ -191,12 +206,14 @@ class CacheBlockLoopNests(ast.NodeTransformer):
                    C.Constant(self.block_factor)),
              node.test.right])
 
-    def visit_For(self, node):
+    def visit(self, node):
+        if not self.inside_nest and not isinstance(node, C.For):
+            raise Exception("CacheBlockLoopNest.visit must be called with the \
+                            outer For node of a loop next, got node type \
+                            {} instead.".format(node))
         start = node.init.right.value
         end = node.test.right.value
-        if end - start < self.block_factor:
-            return node
-        elif self.inside_nest:
+        if self.inside_nest:
             self.nest.append(node)
             if isinstance(node.body[0], C.For):
                 self.visit(node.body[0])
@@ -355,6 +372,19 @@ class Array(np.ndarray):
     A thin wrapper around numpy arrays that provide specialized implementations
     of various operations.
     """
+    def indices(self, block_factor=None, unroll=False):
+        """
+        Return an iterator over the indices of the array
+
+        Allows for specializer writes to declare tuning parameters on the
+        generated loop.  These arguments are ignored for python
+        """
+        return itertools.product(range(d) for d in self.shape)
+
+    @staticmethod
+    def empty(*args, **kwargs):
+        return np.empty(*args, **kwargs).view(Array)
+
     @staticmethod
     def zeros(*args, **kwargs):
         return np.zeros(*args, **kwargs).view(Array)

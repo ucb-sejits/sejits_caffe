@@ -1,4 +1,5 @@
-from sejits_caffe.types.array import specialize, specialized_dispatch
+from sejits_caffe.types.array import specialize, specialized_dispatch, Array
+import numpy as np
 
 
 def convolution_factory(padding, stride):
@@ -7,8 +8,8 @@ def convolution_factory(padding, stride):
 
     @specialize
     def convolution_2d(data, weights, output):
-        for y, x in output.indices():
-            for j, i in weights.indices():
+        for y, x in output.indices(cache_block=True):
+            for j, i in weights.indices(unroll=True):
                 y_in = y * stride_h - pad_h + j
                 x_in = x * stride_w - pad_w + i
                 if 0 <= y_in < data.shape[0] and 0 <= x_in < data.shape[1]:
