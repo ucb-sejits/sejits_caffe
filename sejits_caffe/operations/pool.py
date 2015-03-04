@@ -1,4 +1,5 @@
-from sejits_caffe.types.array import specialize, SpecializedDispatch
+from sejits_caffe.types.array import specialize, specialized_dispatch
+
 
 
 def max_pool_factory(padding, stride, kernel_size):
@@ -26,7 +27,7 @@ def max_pool_factory(padding, stride, kernel_size):
 pool_cache = {}
 
 
-@SpecializedDispatch
+@specialized_dispatch
 def max_pool(data, output, mask, kernel_size, padding=(0, 0), stride=(1, 1)):
     if (padding, stride, kernel_size) not in pool_cache:
         pool_cache[padding, stride, kernel_size] = \

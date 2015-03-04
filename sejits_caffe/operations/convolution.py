@@ -1,4 +1,4 @@
-from sejits_caffe.types.array import specialize, SpecializedDispatch
+from sejits_caffe.types.array import specialize, specialized_dispatch
 
 
 def convolution_factory(padding, stride):
@@ -19,8 +19,13 @@ def convolution_factory(padding, stride):
 convolution_cache = {}
 
 
-@SpecializedDispatch
+@specialized_dispatch
 def convolve(data, weights, output, padding=(0, 0), stride=(1, 1)):
+    """
+    Uses convolution factory generate a specialized convolution function
+    for a specific padding and stride.  Variants are stored in convolution
+    cache
+    """
     if (padding, stride) not in convolution_cache:
         convolution_cache[(padding, stride)] = \
             convolution_factory(padding, stride)

@@ -11,6 +11,7 @@ from ctree.nodes import Project
 import ctypes as ct
 import ast
 import inspect
+from functools import wraps
 
 arr_cfg = namedtuple('arr_cfg', ['shape', 'dtype'])
 tuple_cfg = namedtuple('tuple_cfg', ['val'])
@@ -144,6 +145,11 @@ class Backend(ast.NodeTransformer):
 
 
 class CacheBlockLoopNests(ast.NodeTransformer):
+    """
+    Transformer that cache blocks all loop nests it finds.
+    TODO: Support for variable blocking factors.
+    TODO: Tuning integration (handle variable sized nests?)
+    """
     def __init__(self):
         super(CacheBlockLoopNests, self).__init__()
         self.block_factor = 32
@@ -218,6 +224,17 @@ class ConcreteFn(ConcreteSpecializedFunction):
 
 
 class SpecializedFn(LazySpecializedFunction):
+    """
+    A general specialized function.
+    Supports index based loops on Arrays like
+        for y, x in a.indices():
+
+    Inline constants available in the current scope
+        (currently only supports two stack frames, this could be adjusted by
+         adding a lazy lookup method, but is in danger of having to traverse a
+         large call stack)
+
+    """
     def __init__(self, tree, symbol_table):
         super(SpecializedFn, self).__init__(tree)
         self.symbol_table = symbol_table
@@ -267,7 +284,9 @@ class SpecializedFn(LazySpecializedFunction):
 
 
 def specialize(fn):
-
+    """
+    Specializes function fn using SpecalizedFn.
+    """
     frame = inspect.stack()[1][0]
     symbol_table = frame.f_locals
     symbol_table.update(frame.f_back.f_locals)
@@ -276,37 +295,54 @@ def specialize(fn):
 
     spec_fn = SpecializedFn(get_ast(fn), symbol_table)
 
+    @wraps(fn)
     def fn(*args, **kwargs):
         return spec_fn(*args, **kwargs)
     fn._specializer = spec_fn
     return fn
 
 
-class SpecializedDispatch(object):
-    def __init__(self, fn):
-        self.fn = fn
-        self.num_args = False
+def specialized_dispatch(fn):
+    """
+    Wraps a dispatch function which returns a specializer based on the arguments
+    passed to the function.  Also exposed the ability to trim arguments to the
+    final call by setting the num_args attribute.
 
-    def __call__(self, *args, **kwargs):
+    For example uses see convolution or pooling operators
+    """
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
         trimmed_args = args
-        if self.num_args:
-            trimmed_args = args[:self.num_args]
-        return self.fn(*args, **kwargs)(*trimmed_args, **kwargs)
+        if wrapped.num_args:
+            trimmed_args = args[:wrapped.num_args]
+        return fn(*args, **kwargs)(*trimmed_args, **kwargs)
+    wrapped.specialized_dispatch = True
+    wrapped.fn = fn
+    wrapped.num_args = None
+    return wrapped
 
 
 @specialize
 def array_array_add(a, b, output):
+    """ Elementwise array addition """
     for y, x in output.indices():
         output[y, x] = a[y, x] + b[y, x]
 
 
 @specialize
 def array_scalar_add(a, b, output):
+    """ Array scalar addition """
     for y, x in output.indices():
         output[y, x] = a[y, x] + b
 
 
 def smap(func):
+    """
+    Wraps func with a specializer that will map over an array and call func on
+    each element.
+    TODO: Define a spec for types of functions supported by map.
+    """
+    @wraps(func)
     @specialize
     def fn(a, output):
         for y, x in output.indices():
@@ -315,6 +351,10 @@ def smap(func):
 
 
 class Array(np.ndarray):
+    """
+    A thin wrapper around numpy arrays that provide specialized implementations
+    of various operations.
+    """
     @staticmethod
     def zeros(*args, **kwargs):
         return np.zeros(*args, **kwargs).view(Array)
@@ -332,8 +372,12 @@ class Array(np.ndarray):
         return np.empty_like(*args, **kwargs)
 
     @staticmethod
-    @SpecializedDispatch
+    @specialized_dispatch
     def add(a, b, output):
+        """
+        Dispatches the proper specialized addition operation based on the types
+        of the inputs.
+        """
         if isinstance(a, Array) and isinstance(b, Array):
             return array_array_add
         elif isinstance(a, Array) and type(b) in {np.float32}:

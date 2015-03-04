@@ -1,4 +1,4 @@
-from sejits_caffe.types.array import SpecializedDispatch, smap
+from sejits_caffe.types.array import specialized_dispatch, smap
 
 
 def relu_factory(negative_slope):
@@ -12,7 +12,7 @@ def relu_factory(negative_slope):
 relu_cache = {}
 
 
-@SpecializedDispatch
+@specialized_dispatch
 def relu(data, output, negative_slope):
     if negative_slope not in relu_cache:
         relu_cache[negative_slope] = \

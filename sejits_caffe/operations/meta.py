@@ -11,7 +11,7 @@ import ast
 import ctree.c.nodes as C
 from ctree.types import get_ctype
 from sejits_caffe.types import Array
-from sejits_caffe.types.array import SpecializedDispatch
+from sejits_caffe.types.array import specialized_dispatch
 import numpy as np
 import ctypes as ct
 from collections import namedtuple
@@ -225,7 +225,7 @@ class InlineEnvironment(ast.NodeTransformer):
                             else:
                                 elts += (elt, )
                         params.append(elts)
-            if isinstance(fn, SpecializedDispatch):
+            if hasattr(fn, 'specialized_dispatch'):
                 if fn.num_args:
                     trimmed = params[:fn.num_args]
                 else:
