@@ -13,6 +13,7 @@ def max_pool_factory(padding, stride, kernel_size):
             x_start = max(x * stride_w - pad_w, 0)
             y_end = min(y_start + kernel_h, data.shape[0])
             x_end = min(x_start + kernel_w, data.shape[1])
+            # TODO: Add product or some other construct to make this neater
             for yy in range(y_start, y_end):
                 for xx in range(x_start, x_end):
                     if data[yy, xx] > output[y, x]:

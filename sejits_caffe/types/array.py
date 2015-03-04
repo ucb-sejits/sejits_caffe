@@ -134,6 +134,7 @@ class Backend(ast.NodeTransformer):
         node.args = [self.visit(arg) for arg in node.args]
         func_tree = get_ast(self.symbol_table[node.func.name])
         func_tree = PyBasicConversions().visit(func_tree).body[0]
+        func_tree = self.visit(func_tree)
         func_tree.name = C.SymbolRef(node.func.name)
         self.defns.append(func_tree)
         # FIXME: Infer type
@@ -269,7 +270,9 @@ def specialize(fn):
 
     frame = inspect.stack()[1][0]
     symbol_table = frame.f_locals
+    symbol_table.update(frame.f_back.f_locals)
     # FIXME: symbol_table prints out a huge dict, why??
+    # TODO: We grab the last two frames, what to do if there's more?
 
     spec_fn = SpecializedFn(get_ast(fn), symbol_table)
 
