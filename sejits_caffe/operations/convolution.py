@@ -20,7 +20,7 @@ def convolution_factory(padding, stride):
 convolution_cache = {}
 
 
-@specialized_dispatch
+@specialized_dispatch(num_args=3)
 def convolve(data, weights, output, padding=(0, 0), stride=(1, 1)):
     """
     Uses convolution factory generate a specialized convolution function
@@ -31,5 +31,3 @@ def convolve(data, weights, output, padding=(0, 0), stride=(1, 1)):
         convolution_cache[(padding, stride)] = \
             convolution_factory(padding, stride)
     return convolution_cache[(padding, stride)]
-
-convolve.num_args = 3

@@ -13,6 +13,7 @@ import ast
 import inspect
 from functools import wraps
 import itertools
+import sys
 
 arr_cfg = namedtuple('arr_cfg', ['shape', 'dtype'])
 tuple_cfg = namedtuple('tuple_cfg', ['val'])
@@ -80,12 +81,20 @@ class Backend(ast.NodeTransformer):
         for key in keywords:
             if key.arg == 'cache_block':
                 self.includes.add("math.h")
-                if not isinstance(key.value, ast.Name) or \
-                        key.value.id not in {'True', 'False'}:
-                    raise NotImplementedError(
-                        "Unsupported argument to cache_block " + ast.dump(key))
-                if key.value.id == 'True':
-                    outer = CacheBlockLoopNest().visit(outer)
+                if sys.version_info > (3, 0):
+                    if not isinstance(key.value, ast.NameConstant) or \
+                            key.value.value not in {True, False}:
+                        raise NotImplementedError(
+                            "Unsupported argument to cache_block " + ast.dump(key))
+                    if key.value.value:
+                        outer = CacheBlockLoopNest().visit(outer)
+                else:
+                    if not isinstance(key.value, ast.Name) or \
+                            key.value.id not in {'True', 'False'}:
+                        raise NotImplementedError(
+                            "Unsupported argument to cache_block " + ast.dump(key))
+                    if key.value.id == 'True':
+                        outer = CacheBlockLoopNest().visit(outer)
             elif key.arg == 'unroll':
                 pass
             else:
@@ -319,14 +328,21 @@ def specialize(fn):
     return fn
 
 
-def specialized_dispatch(fn):
+def specialized_dispatch(fn=None, num_args=None):
     """
     Wraps a dispatch function which returns a specializer based on the arguments
     passed to the function.  Also exposed the ability to trim arguments to the
-    final call by setting the num_args attribute.
+    final call by passing the num_args keyword.
 
     For example uses see convolution or pooling operators
     """
+    if num_args:
+        def wrapped(fn):
+            fn = specialized_dispatch(fn)
+            fn.num_args = num_args
+            return fn
+        return wrapped
+
     @wraps(fn)
     def wrapped(*args, **kwargs):
         trimmed_args = args

@@ -27,11 +27,9 @@ def max_pool_factory(padding, stride, kernel_size):
 pool_cache = {}
 
 
-@specialized_dispatch
+@specialized_dispatch(num_args=3)
 def max_pool(data, output, mask, kernel_size, padding=(0, 0), stride=(1, 1)):
     if (padding, stride, kernel_size) not in pool_cache:
         pool_cache[padding, stride, kernel_size] = \
             max_pool_factory(padding, stride, kernel_size)
     return pool_cache[padding, stride, kernel_size]
-
-max_pool.num_args = 3
