@@ -26,9 +26,13 @@ class Backend(ast.NodeTransformer):
 
     def visit_CFile(self, node):
         self.defns = []
+        self.includes = set()
         node = super(Backend, self).generic_visit(node)
         for defn in self.defns:
             node.body.insert(0, defn)
+        for include in self.includes:
+            node.body.insert(
+                0, StringTemplate("#include <{}>".format(include)))
         return node
 
     def visit_FunctionDecl(self, node):
@@ -65,11 +69,10 @@ class Backend(ast.NodeTransformer):
         return node, curr_node
 
     def is_loop_by_index(self, node):
-        if isinstance(node.iter, ast.Call):
-            if isinstance(node.iter.func, ast.Attribute):
-                if node.iter.func.attr == 'indices':
-                    return True
-        return False
+        return (isinstance(node, ast.For) and
+                isinstance(node.iter, ast.Call) and
+                isinstance(node.iter.func, ast.Attribute) and
+                node.iter.func.attr == 'indices')
 
     def visit_For(self, node):
         if self.is_loop_by_index(node):
@@ -94,7 +97,6 @@ class Backend(ast.NodeTransformer):
 
     def visit_SymbolRef(self, node):
         if node.name in self.symbol_table:
-            print(node.name, self.symbol_table[node.name])
             return C.Constant(self.symbol_table[node.name])
         return node
 
@@ -122,6 +124,11 @@ class Backend(ast.NodeTransformer):
         return node
 
     def visit_FunctionCall(self, node):
+        if node.func.name in {'min', 'max'}:
+            node.func.name = "f" + node.func.name
+            # TODO: Add support for all math funcs
+            self.includes.add("math.h")
+            return super(Backend, self).generic_visit(node)
         # FIXME: This is specific for handling a map function
         # do we have to generalize?
         node.args = [self.visit(arg) for arg in node.args]

@@ -294,7 +294,7 @@ class MetaSpecialized(LazySpecializedFunction):
         inliner = InlineEnvironment(self.symbol_table)
         tree = inliner.visit(tree)
         tree = PyBasicConversions().visit(tree)
-        tree.find(C.For).pragma = 'omp parallel'
+        tree.find(C.For).pragma = 'omp parallel for'
         tree.name = self.original_tree.body[0].name
         body = []
         for file in inliner.files:

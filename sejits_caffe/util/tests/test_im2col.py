@@ -28,6 +28,7 @@ def py_im2col(a, kernel_size, pad, stride):
     return out
 
 
+@unittest.skip("deprecated")
 class TestIm2Col(unittest.TestCase):
     def setUp(self):
         height = 64
