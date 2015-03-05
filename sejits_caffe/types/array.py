@@ -15,8 +15,7 @@ from functools import wraps
 import itertools
 import sys
 
-arr_cfg = namedtuple('arr_cfg', ['shape', 'dtype'])
-tuple_cfg = namedtuple('tuple_cfg', ['val'])
+ArrayCfg = namedtuple('ArrayCfg', ['shape', 'dtype'])
 
 
 class Backend(ast.NodeTransformer):
@@ -26,6 +25,7 @@ class Backend(ast.NodeTransformer):
         self.cfg_dict = {}
         self.loop_shape_map = {}
         self.defns = []
+        self.includes = None
 
     def visit_CFile(self, node):
         self.defns = []
@@ -40,11 +40,11 @@ class Backend(ast.NodeTransformer):
 
     def visit_FunctionDecl(self, node):
         for param, cfg in zip(node.params, self.arg_cfg):
-            if type(cfg) == arr_cfg:
+            if type(cfg) == ArrayCfg:
                 param.type = np.ctypeslib.ndpointer(cfg.dtype, len(cfg.shape),
                                                     cfg.shape)()
-            elif type(cfg) == int:
-                param.type = ct.c_int()
+            elif type(cfg) == np.float32:
+                param.type = ct.c_float()
             else:
                 # TODO: Generalize type inference or add support for all types
                 raise NotImplementedError()
@@ -79,20 +79,24 @@ class Backend(ast.NodeTransformer):
 
     def process_loop_options(self, keywords, outer):
         for key in keywords:
-            if key.arg == 'cache_block':
+            if key.arg == 'parallel':
+                outer.pragma = 'omp parallel for'
+            elif key.arg == 'cache_block':
                 self.includes.add("math.h")
                 if sys.version_info > (3, 0):
                     if not isinstance(key.value, ast.NameConstant) or \
                             key.value.value not in {True, False}:
                         raise NotImplementedError(
-                            "Unsupported argument to cache_block " + ast.dump(key))
+                            "Unsupported argument to cache_block " +
+                            ast.dump(key))
                     if key.value.value:
                         outer = CacheBlockLoopNest().visit(outer)
                 else:
                     if not isinstance(key.value, ast.Name) or \
                             key.value.id not in {'True', 'False'}:
                         raise NotImplementedError(
-                            "Unsupported argument to cache_block " + ast.dump(key))
+                            "Unsupported argument to cache_block " +
+                            ast.dump(key))
                     if key.value.id == 'True':
                         outer = CacheBlockLoopNest().visit(outer)
             elif key.arg == 'unroll':
@@ -220,8 +224,14 @@ class CacheBlockLoopNest(ast.NodeTransformer):
             raise Exception("CacheBlockLoopNest.visit must be called with the \
                             outer For node of a loop next, got node type \
                             {} instead.".format(node))
-        start = node.init.right.value
-        end = node.test.right.value
+        start = node.init.right
+        end = node.test.right
+        if not isinstance(start, C.Constant) or \
+                not isinstance(end, C.Constant):
+            # Cache blocking only works over constant ranges for now
+            return node
+        if end.value - start.value < self.block_factor:
+            return node
         if self.inside_nest:
             self.nest.append(node)
             if isinstance(node.body[0], C.For):
@@ -233,7 +243,11 @@ class CacheBlockLoopNest(ast.NodeTransformer):
                 self.nest.append(node)
                 self.visit(node.body[0])
                 self.block_loop(node)
-                return self.gen_nest()
+                outer = self.gen_nest()
+                if node.pragma == 'omp parallel for':
+                    node.pragma = 'omp for'
+                    outer.pragma = 'omp parallel'
+                return outer
             else:
                 return node
 
@@ -269,7 +283,7 @@ class SpecializedFn(LazySpecializedFunction):
         arg_cfg = ()
         for arg in args:
             if isinstance(arg, Array):
-                arg_cfg += (arr_cfg(arg.shape, arg.dtype), )
+                arg_cfg += (ArrayCfg(arg.shape, arg.dtype), )
             elif type(arg) in {int, float, np.float32}:
                 arg_cfg += (arg, )
             else:
@@ -294,7 +308,7 @@ class SpecializedFn(LazySpecializedFunction):
         arg_cfg, tune_cfg = program_cfg
         entry_type = (None, )
         for cfg in arg_cfg:
-            if isinstance(cfg, arr_cfg):
+            if isinstance(cfg, ArrayCfg):
                 entry_type += (np.ctypeslib.ndpointer(cfg.dtype,
                                                       len(cfg.shape),
                                                       cfg.shape), )
@@ -330,9 +344,9 @@ def specialize(fn):
 
 def specialized_dispatch(fn=None, num_args=None):
     """
-    Wraps a dispatch function which returns a specializer based on the arguments
-    passed to the function.  Also exposed the ability to trim arguments to the
-    final call by passing the num_args keyword.
+    Wraps a dispatch function which returns a specializer based on the
+    arguments passed to the function.  Also exposed the ability to trim
+    arguments to the final call by passing the num_args keyword.
 
     For example uses see convolution or pooling operators
     """
@@ -358,14 +372,14 @@ def specialized_dispatch(fn=None, num_args=None):
 @specialize
 def array_array_add(a, b, output):
     """ Elementwise array addition """
-    for y, x in output.indices():
+    for y, x in output.indices(parallel=True):
         output[y, x] = a[y, x] + b[y, x]
 
 
 @specialize
 def array_scalar_add(a, b, output):
     """ Array scalar addition """
-    for y, x in output.indices():
+    for y, x in output.indices(parallel=True):
         output[y, x] = a[y, x] + b
 
 

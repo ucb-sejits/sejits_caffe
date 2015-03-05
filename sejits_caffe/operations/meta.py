@@ -9,9 +9,9 @@ from ctree.nodes import Project
 
 import ast
 import ctree.c.nodes as C
+from ctree.templates.nodes import StringTemplate
 from ctree.types import get_ctype
 from sejits_caffe.types import Array
-from sejits_caffe.types.array import specialized_dispatch
 import numpy as np
 import ctypes as ct
 from collections import namedtuple
@@ -58,7 +58,6 @@ class InlineEnvironment(ast.NodeTransformer):
         self.symbol_table = symbol_table
         self.decls = {}
         self.loop_vars = []
-        self.files = []
 
     def visit_FunctionDef(self, node):
         self.decls = {}
@@ -236,11 +235,14 @@ class InlineEnvironment(ast.NodeTransformer):
             dir_name = fn._specializer.config_to_dirname(cfg)
             result = fn._specializer.get_transform_result(
                 cfg, dir_name, cache=False)
-            result[0].body[-1].static = True
-            result[0].body[-1].inline = True
-            self.files.extend(result)
-            node.args = args
-            node.func = ast.Name(result[0].body[-1].name, ast.Load())
+            block = C.Block()
+            func = result[0].body[-1]
+            block.body = func.defn
+            for arg, param in zip(args, func.params):
+                block.body.insert(0, C.Assign(param, arg))
+            return block
+            # node.args = args
+            # node.func = ast.Name(result[0].body[-1].name, ast.Load())
         else:
             node.args = [self.visit(arg) for arg in node.args]
         return node
@@ -267,7 +269,11 @@ class ConcreteMeta(ConcreteSpecializedFunction):
                     if _id == param.name:
                         a.append(args[i])
                         break
-        return self._c_function(*a)
+        from ctree.util import Timer
+        with Timer() as t:
+            retval = self._c_function(*a)
+        print("meta time {}".format(t.interval))
+        return retval
 
 
 class MetaSpecialized(LazySpecializedFunction):
@@ -294,13 +300,10 @@ class MetaSpecialized(LazySpecializedFunction):
         inliner = InlineEnvironment(self.symbol_table)
         tree = inliner.visit(tree)
         tree = PyBasicConversions().visit(tree)
-        tree.find(C.For).pragma = 'omp parallel for'
+        # tree.find(C.For).pragma = 'omp parallel for'
         tree.name = self.original_tree.body[0].name
-        body = []
-        for file in inliner.files:
-            body.extend(file.body)
-        tree.body = body + tree.body
-        print(tree)
+        tree.body.insert(0, StringTemplate("#include <math.h>"))
+        # print(tree)
         return [tree]
 
     def finalize(self, files, program_cfg):

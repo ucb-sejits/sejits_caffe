@@ -134,8 +134,7 @@ class ConvLayer(BaseLayer):
                     type {}".format(weight_filler.type))
             if self.bias_term:
                 # FIXME: This should be a 1d array
-                self.bias = Array((num_output, top.shape[-2], top.shape[-1]),
-                                  np.float32)
+                self.bias = Array((num_output, ), np.float32)
                 filler = conv_param.bias_filler
                 if filler.type == 'constant':
                     self.bias.fill(filler.value)

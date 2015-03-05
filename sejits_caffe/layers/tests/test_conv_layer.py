@@ -18,7 +18,10 @@ class ConvConcrete(ConcreteSpecializedFunction):
         self._c_function = self._compile(entry_name, proj, entry_type)
 
     def __call__(self, *args):
-        self._c_function(*args)
+        from ctree.util import Timer
+        with Timer() as t:
+            self._c_function(*args)
+        print("Naive time {}".format(t.interval))
 
 
 class NaiveConv(LazySpecializedFunction):
