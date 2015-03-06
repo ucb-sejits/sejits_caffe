@@ -59,6 +59,7 @@ class InlineEnvironment(ast.NodeTransformer):
         self.symbol_table = symbol_table
         self.decls = {}
         self.loop_vars = []
+        self.files = []
 
     def visit_FunctionDef(self, node):
         self.decls = {}
@@ -237,7 +238,10 @@ class InlineEnvironment(ast.NodeTransformer):
             result = fn._specializer.get_transform_result(
                 cfg, dir_name, cache=False)
             block = C.Block()
-            func = result[0].body[-1]
+            cfile = result[0]
+            func = cfile.find(C.FunctionDecl, name=cfile.name)
+            cfile.body = [s for s in cfile.body if s is not func]
+            self.files.extend(cfile.body)
             block.body = func.defn
             for arg, param in zip(args, func.params):
                 block.body.insert(0, C.Assign(param, arg))
@@ -301,6 +305,7 @@ class MetaSpecialized(LazySpecializedFunction):
         inliner = InlineEnvironment(self.symbol_table)
         tree = inliner.visit(tree)
         tree = PyBasicConversions().visit(tree)
+        tree.body = inliner.files + tree.body
         # tree.find(C.For).pragma = 'omp parallel for'
         tree.name = self.original_tree.body[0].name
         tree.body.insert(0, StringTemplate("#include <math.h>"))

@@ -170,6 +170,8 @@ class Backend(ast.NodeTransformer):
         func_tree = PyBasicConversions().visit(func_tree).body[0]
         func_tree = self.visit(func_tree)
         func_tree.name = C.SymbolRef(node.func.name)
+        func_tree.set_static()
+        func_tree.set_inline()
         self.defns.append(func_tree)
         # FIXME: Infer type
         func_tree.params[0].type = ct.c_float()
@@ -300,7 +302,6 @@ class SpecializedFn(LazySpecializedFunction):
         tree = PyBasicConversions().visit(tree)
         tree = Backend(arg_cfg, self.symbol_table).visit(tree)
         tree = ConstantFold().visit(tree)
-        # tree = CacheBlockLoopNests().visit(tree)
         tree.name = self.original_tree.body[0].name
         return tree
 
