@@ -429,7 +429,11 @@ class Array(np.ndarray):
 
     @staticmethod
     def empty_like(*args, **kwargs):
-        return np.empty_like(*args, **kwargs)
+        return np.empty_like(*args, **kwargs).view(Array)
+
+    @staticmethod
+    def array(*args, **kwargs):
+        return np.array(*args, **kwargs).view(Array)
 
     @staticmethod
     @specialized_dispatch

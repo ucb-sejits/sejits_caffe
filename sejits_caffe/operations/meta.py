@@ -19,8 +19,8 @@ from collections import namedtuple
 arr_cfg = namedtuple('arr_cfg', ['shape', 'dtype'])
 
 
+"""
 class Desugar(ast.NodeTransformer):
-    """Desugar Python operators into the actual methods call"""
     def visit_Binop(self, node):
         node.left = self.visit(node.left)
         node.right = self.visit(node.right)
@@ -51,6 +51,7 @@ class Desugar(ast.NodeTransformer):
             return ast.Assign([node.target],
                               ast.Call(op, [node.value], [], None, None))
         return node
+"""
 
 
 class InlineEnvironment(ast.NodeTransformer):
@@ -296,7 +297,7 @@ class MetaSpecialized(LazySpecializedFunction):
 
     def transform(self, tree, program_cfg):
         arg_cfg, tune_cfg = program_cfg
-        tree = Desugar().visit(tree)
+        # tree = Desugar().visit(tree)
         inliner = InlineEnvironment(self.symbol_table)
         tree = inliner.visit(tree)
         tree = PyBasicConversions().visit(tree)

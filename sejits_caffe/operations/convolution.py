@@ -6,7 +6,7 @@ def convolution_factory(padding, stride):
     stride_h, stride_w = stride
 
     @specialize
-    def convolution_2d(data, weights, output):
+    def convolution_2d(data, weights, output):  # pragma: no cover
         for y, x in output.indices(parallel=True, cache_block=True):
             for j, i in weights.indices(unroll=True):
                 y_in = y * stride_h - pad_h + j

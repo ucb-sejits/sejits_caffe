@@ -29,7 +29,6 @@ class TestConvolution(unittest.TestCase):
 
         expected = signal.convolve(a, np.fliplr(np.flipud(weights)),
                                    mode='same')[2:, 2:]
-
         self._check(actual, expected)
 
 
