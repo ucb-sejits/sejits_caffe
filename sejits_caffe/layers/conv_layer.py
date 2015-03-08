@@ -91,7 +91,7 @@ class ConvLayer(BaseLayer):
         assert conv_param.num_output > 0, "Layer must have at least one output"
 
         self.group = conv_param.group
-        
+
         self.weights = None
         self.bias_term = None
         self.bias = None
