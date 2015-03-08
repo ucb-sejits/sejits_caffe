@@ -85,25 +85,13 @@ class ConvLayer(BaseLayer):
         assert (self.kernel_h, self.kernel_w) > (0, 0), \
             "Filter dimensions cannot be zero."
 
-        self.pad_h = conv_param.pad
-        self.pad_w = conv_param.pad
-
-        self.stride_h = conv_param.stride
-        self.stride_w = conv_param.stride
+        self.padding = (conv_param.pad, conv_param.pad)
+        self.stride = (conv_param.stride, conv_param.stride)
 
         assert conv_param.num_output > 0, "Layer must have at least one output"
 
         self.group = conv_param.group
-
-        self.conv_out_channels = None
-        self.conv_in_channels = None
-        self.conv_in_height = None
-        self.conv_in_width = None
-        self.conv_out_spatial_dim = None
-        self.kernel_dim = None
-        self.weight_offset = None
-        self.col_offset = None
-        self.output_offset = None
+        
         self.weights = None
         self.bias_term = None
         self.bias = None
@@ -155,8 +143,7 @@ class ConvLayer(BaseLayer):
                             self.weights[out_group + group * out_groups,
                                          in_group],
                             top[i, out_group + group * out_groups],
-                            (self.pad_h, self.pad_w),
-                            (self.stride_h, self.stride_w))
+                            self.padding, self.stride)
 
             if self.bias_term:
                 for j in range(len(self.bias)):

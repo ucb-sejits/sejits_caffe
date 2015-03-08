@@ -213,6 +213,9 @@ class InlineEnvironment(ast.NodeTransformer):
                     if isinstance(value[index], Array):
                         arg = C.Ref(arg)
                     args.append(arg)
+                elif isinstance(arg, ast.Attribute):
+                    value = self.eval_in_table(arg)
+                    params.append(value)
                 else:
                     arg = self.visit(arg)
                     if isinstance(arg, C.SymbolRef):
