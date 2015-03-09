@@ -39,7 +39,7 @@ class TestLRNLayer(unittest.TestCase):
             for c in range(bottom.shape[1]):
                 for h in range(bottom.shape[2]):
                     for w in range(bottom.shape[3]):
-                        c_start = c - (size - 1) / 2
+                        c_start = c - (size - 1) // 2
                         c_end = min(c_start + size, bottom.shape[1])
                         scale = 1
                         for i in range(c_start, c_end):
