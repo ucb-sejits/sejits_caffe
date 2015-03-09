@@ -421,6 +421,10 @@ class Array(np.ndarray):
         return np.zeros(*args, **kwargs).view(Array)
 
     @staticmethod
+    def zeros_like(*args, **kwargs):
+        return np.zeros_like(*args, **kwargs).view(Array)
+
+    @staticmethod
     def rand(*args, **kwargs):
         return np.random.rand(*args, **kwargs).view(Array)
 
