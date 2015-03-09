@@ -437,6 +437,10 @@ class Array(np.ndarray):
         return np.empty_like(*args, **kwargs).view(Array)
 
     @staticmethod
+    def ones(*args, **kwargs):
+        return np.ones(*args, **kwargs).view(Array)
+
+    @staticmethod
     def array(*args, **kwargs):
         return np.array(*args, **kwargs).view(Array)
 

@@ -14,13 +14,16 @@ class AccuracyLayer(BaseLayer):
         data = bottom[0]
         label = bottom[1]
         dim = np.prod(data.shape) / data.shape[0]
+
+        # Perform a partial sort to find top_k
         for i in range(data.shape[0]):
             vec = Array.array(
                 [[data[i * dim + j], j] for j in range(dim)])
             vec.partition((0, self.top_k))
 
-        for k in range(self.top_k):
-            if vec[k][1] == label[i]:
-                accuracy += 1
+            # If label is in top_k increase accuracy
+            for k in range(self.top_k):
+                if vec[k][1] == label[i]:
+                    accuracy += 1
 
         top[0] = accuracy / data.shape[0]
