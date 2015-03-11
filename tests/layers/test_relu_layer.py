@@ -30,18 +30,27 @@ class TestReluLayer(unittest.TestCase):
         expected = np.clip(bottom, 0.0, float('inf')).astype(np.float32)
         np.testing.assert_allclose(actual, expected)
 
-    # def test_backward_simple(self):
-    #     channels = 12
-    #     height = 3
-    #     width = 5
-    #     bottom = Array.rand(
-    #         5, channels, height, width).astype(np.float32)
-    #     bottom = bottom * 256 - 128
-    #     layer = ReluLayer(self.layer[3])
-    #     actual = Array.zeros(bottom.shape, np.float32)
-    #     layer.backward(bottom, actual, top, top_diff)
-    #     expected = np.multiply(top_diff, np.greater(bottom, np.zeros(bottom)))
-    #     np.testing.assert_allclose(actual, expected)
+    def test_backward_simple(self):
+        channels = 12
+        height = 3
+        width = 5
+        bottom = Array.rand(
+            5, channels, height, width).astype(np.float32)
+        bottom = bottom * 256 - 128
+
+        top_diff = Array.rand(
+            5, channels, height,width).astype(np.float32)
+        top_diff = top_diff * 256 -128
+
+        top = np.zeros(top_diff.shape, np.float32)
+        actual = Array.zeros(bottom.shape, np.float32)
+
+        layer = ReluLayer(self.layer[3])
+        layer.backward(bottom, actual, top, top_diff)
+
+        expected = np.multiply(top_diff, np.greater(bottom, Array.zeros(bottom.shape, np.float32)))
+
+        np.testing.assert_allclose(actual, expected)
 
 if __name__ == '__main__':
     unittest.main()
