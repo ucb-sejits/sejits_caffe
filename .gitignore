@@ -3,7 +3,8 @@ dist
 __pycache__
 *.pyc
 .idea
-.swp
+*.swp
+*.un
 *.sublime-project
 *.sublime-workspace
 venv
