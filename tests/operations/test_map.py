@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from sejits_caffe.types.array import Array, smap
+from sejits_caffe.types.array import Array, smap, smap2
 
 
 class TestMap(unittest.TestCase):
@@ -21,6 +21,25 @@ class TestMap(unittest.TestCase):
         fn(a, actual)
         expected = np.copy(a)
         expected[expected < 0] = 0
+        self._check(actual, expected)
+
+
+    def test_two_inputs(self):
+        a = Array.rand(256, 256).astype(np.float32) * 255 - 128
+        b = Array.rand(256, 256).astype(np.float32) * 255 - 128
+        negative_slope = 0
+
+        @smap2
+        def fn(x, y):
+            if x > 0:
+                return y
+            else:
+                return negative_slope * y
+
+        actual = Array.zeros(a.shape, np.float32)
+        fn(a, b, actual)
+        expected = b
+        expected[a <= 0] *= negative_slope
         self._check(actual, expected)
 
 

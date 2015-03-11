@@ -174,7 +174,8 @@ class Backend(ast.NodeTransformer):
         func_tree.set_inline()
         self.defns.append(func_tree)
         # FIXME: Infer type
-        func_tree.params[0].type = ct.c_float()
+        for p in func_tree.params:
+            p.type = ct.c_float()
         func_tree.return_type = ct.c_float()
         return node
 
@@ -395,6 +396,20 @@ def smap(func):
     def fn(a, output):
         for y, x in output.indices():
             output[y, x] = func(a[y, x])
+    return fn
+
+
+def smap2(func):
+    """
+    Wraps func with a specializer that will map over an array and call func on
+    each element.
+    TODO: Define a spec for types of functions supported by map.
+    """
+    @wraps(func)
+    @specialize
+    def fn(a, b, output):
+        for y, x in output.indices():
+            output[y, x] = func(a[y, x], b[y, x])
     return fn
 
 
