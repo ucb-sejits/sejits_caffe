@@ -19,15 +19,15 @@ class TestLRNLayer(unittest.TestCase):
             self.fail(e)
 
     def setUp(self):
-        param_string = open(path + '/lrn_test.prototxt').read()
+        param_string = open(path + '/alexnet.prototxt').read()
         param = caffe_pb2.NetParameter()
         text_format.Merge(param_string, param)
-        self.layers = param.layers
+        self.layer = param.layer
 
     def test_simple(self):
         bottom = Array.rand(3, 8, 32, 32).astype(np.float32)
         actual = Array.zeros_like(bottom)
-        layer = LRNLayer(self.layers[0])
+        layer = LRNLayer(self.layer[4])
         param = layer.layer_param.lrn_param
         alpha = param.alpha
         size = param.local_size

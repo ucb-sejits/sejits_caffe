@@ -12,10 +12,10 @@ path = os.path.dirname(os.path.realpath(__file__))
 
 class TestReluLayer(unittest.TestCase):
     def setUp(self):
-        param_string = open(path + '/test_relu.prototxt').read()
+        param_string = open(path + '/alexnet.prototxt').read()
         param = caffe_pb2.NetParameter()
         text_format.Merge(param_string, param)
-        self.layers = param.layers
+        self.layer = param.layer
 
     def test_simple(self):
         channels = 12
@@ -24,7 +24,7 @@ class TestReluLayer(unittest.TestCase):
         bottom = Array.rand(
             5, channels, height, width).astype(np.float32)
         bottom = bottom * 256 - 128
-        layer = ReluLayer(self.layers[0])
+        layer = ReluLayer(self.layer[3])
         actual = Array.zeros(bottom.shape, np.float32)
         layer.forward(bottom, actual)
         expected = np.clip(bottom, 0.0, float('inf')).astype(np.float32)

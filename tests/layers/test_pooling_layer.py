@@ -12,10 +12,10 @@ path = os.path.dirname(os.path.realpath(__file__))
 
 class TestPoolingLayer(unittest.TestCase):
     def setUp(self):
-        param_string = open(path + '/test_pool.prototxt').read()
+        param_string = open(path + '/alexnet.prototxt').read()
         param = caffe_pb2.NetParameter()
         text_format.Merge(param_string, param)
-        self.layers = param.layers
+        self.layer = param.layer
 
     def test_simple(self):
         channels = 12
@@ -28,7 +28,10 @@ class TestPoolingLayer(unittest.TestCase):
                     [[1, 2, 5, 2, 3],
                      [9, 4, 1, 4, 8],
                      [1, 2, 5, 2, 3]], np.int32)
-        layer = PoolingLayer(self.layers[0])
+        param = self.layer[5]
+        param.pooling_param.kernel_size = 2
+        param.pooling_param.stride = 1
+        layer = PoolingLayer(param)
         pooled_height = (height + 2 * layer.pad_h - layer.kernel_h) \
             / layer.stride_h + 1
         pooled_width = (width + 2 * layer.pad_w - layer.kernel_w) \
