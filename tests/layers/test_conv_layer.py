@@ -91,10 +91,10 @@ class ConvLayerTest(unittest.TestCase):
             self.fail(e)
 
     def setUp(self):
-        param_string = open(path + '/alexnet.prototxt').read()
+        param_string = open(path + '/test.prototxt').read()
         param = caffe_pb2.NetParameter()
         text_format.Merge(param_string, param)
-        self.layer = param.layer
+        self.layers = param.layers
 
     def _forward_test(self, param, in_shape):
         conv_param = param.convolution_param
@@ -117,20 +117,26 @@ class ConvLayerTest(unittest.TestCase):
         expected_conv(in_batch, conv.weights, conv.bias, expected)
         self._check(actual, expected)
 
+    def test_simple_layer(self):
+        self._forward_test(self.layers[0], (5, 3, 128, 128))
+
     def test_alex_net_conv1(self):
-        self._forward_test(self.layer[2], (5, 3, 256, 256))
+        self._forward_test(self.layers[1], (5, 3, 256, 256))
 
     def test_alex_net_conv2(self):
-        self._forward_test(self.layer[6], (5, 16, 64, 64))
+        self._forward_test(self.layers[2], (5, 16, 64, 64))
 
     def test_alex_net_conv3(self):
-        self._forward_test(self.layer[10], (5, 4, 64, 64))
+        self._forward_test(self.layers[3], (5, 4, 64, 64))
 
     def test_alex_net_conv4(self):
-        self._forward_test(self.layer[12], (5, 8, 64, 64))
+        self._forward_test(self.layers[4], (5, 8, 64, 64))
 
     def test_alex_net_conv5(self):
-        self._forward_test(self.layer[14], (5, 8, 64, 64))
+        self._forward_test(self.layers[5], (5, 8, 64, 64))
+
+    def _backward_test(self, param, in_shape):
+        pass
 
 if __name__ == '__main__':
     unittest.main()
