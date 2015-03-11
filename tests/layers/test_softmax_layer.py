@@ -32,7 +32,7 @@ class TestSoftmaxLayer(unittest.TestCase):
                                        np.exp(bottom[i, j, k, l]) / scale)
 
 
-@unittest.skip("not working")
+@unittest.skip("Not working")
 class TestSoftmaxWitLossLayer(unittest.TestCase):
     def test_forward(self):
         param_string = open(path + '/alexnet.prototxt').read()
@@ -53,6 +53,7 @@ class TestSoftmaxWitLossLayer(unittest.TestCase):
             layer = SoftMaxWithLossLayer(param)
             layer.setup(bottom, top)
             layer.forward(bottom, top)
+            print(top[0])
             accum_loss += top[0]
 
         print(full_loss)
