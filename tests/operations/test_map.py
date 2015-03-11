@@ -29,7 +29,7 @@ class TestMap(unittest.TestCase):
         b = Array.rand(256, 256).astype(np.float32) * 255 - 128
         negative_slope = 0
 
-        @smap
+        @smap2
         def fn(x, y):
             if x > 0:
                 return y
