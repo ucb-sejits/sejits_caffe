@@ -9,10 +9,13 @@ class AccuracyLayer(BaseLayer):
         super(AccuracyLayer, self).__init__(param)
         self.top_k = param.accuracy_param.top_k
 
-    def forward(self, bottom, top):
+    def setup(self, bottom_data, bottom_label, top):
+        pass
+
+    def forward(self, bottom_data, bottom_label, top):
         accuracy = 0
-        data = bottom[0]
-        label = bottom[1]
+        data = bottom_data
+        label = bottom_label
         dim = np.prod(data.shape) / data.shape[0]
 
         # Perform a partial sort to find top_k

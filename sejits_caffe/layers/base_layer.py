@@ -4,7 +4,7 @@ class BaseLayer(object):
         self.blobs = []
         # TODO:  Initialize with proto blob
 
-    def set_up(self, bottom, top):
+    def setup(self, bottom, top):
         pass
 
     def forward(self, bottom, top):

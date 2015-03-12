@@ -2,5 +2,5 @@ from sejits_caffe.layers.base_layer import BaseLayer
 
 
 class DataLayer(BaseLayer):
-    def set_up(self, bottom, top):
+    def setup(self, top, top_label):
         pass

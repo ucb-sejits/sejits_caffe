@@ -55,7 +55,8 @@ class Net(object):
                     self.blobs[blob] = Array.zeros((5, 4, 256, 256), np.float32)
                 top.append(self.blobs[blob])
             layer = self.layer_type_map[layer_param.type](layer_param)
-            layer.set_up(np.array(bottom).view(Array), np.array(top).view(Array))
+            print(layer_param.type)
+            layer.setup(*(bottom + top))
             self.layers.append(layer)
         print(self.layers)
 

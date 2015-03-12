@@ -47,13 +47,13 @@ class SoftMaxWithLossLayer(LossLayer):
         self.ignore_label = param.loss_param.ignore_label
         self.normalize = param.loss_param.normalize
 
-    def setup(self, bottom, top):
-        self.prob = Array.zeros_like(bottom[0])
-        self.softmax_layer.setup(bottom[0], self.prob)
+    def setup(self, bottom_data, bottom_label, top):
+        self.prob = Array.zeros_like(bottom_data)
+        self.softmax_layer.setup(bottom_data, self.prob)
 
-    def forward(self, bottom, top):
-        self.softmax_layer.forward(bottom[0], self.prob)
-        label = bottom[1]
+    def forward(self, bottom_data, bottom_label, top):
+        self.softmax_layer.forward(bottom_data, self.prob)
+        label = bottom_label
         loss = 0.0
         count = 0
         for i in range(self.prob.shape[0]):
@@ -70,4 +70,4 @@ class SoftMaxWithLossLayer(LossLayer):
         if self.normalize:
             top[0] = loss / count
         else:
-            top[0] = loss / bottom[0].shape[0]
+            top[0] = loss / bottom_data.shape[0]

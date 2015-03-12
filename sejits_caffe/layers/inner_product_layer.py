@@ -21,7 +21,7 @@ class InnerProductLayer(BaseLayer):
 
     def setup(self, bottom, top):
         weights_shape = (self.num_output, bottom.shape[0])
-        weight_filler = self.layer_param.weight_filler
+        weight_filler = self.layer_param.inner_product_param.weight_filler
         if weight_filler.type == 'gaussian':
             self.weights = weight_filler.mean + weight_filler.std * \
                 Array.standard_normal(
