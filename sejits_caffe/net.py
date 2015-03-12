@@ -37,7 +37,7 @@ class Net(object):
     }
 
     def __init__(self, param_file):
-        # importing net param from .prototxt 
+        # importing net param from .prototxt
         self.param = caffe_pb2.NetParameter()
         param_string = open(param_file).read()
         text_format.Merge(param_string, self.param)
