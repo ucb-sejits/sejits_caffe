@@ -99,6 +99,7 @@ class ConvLayer(BaseLayer):
     def set_up(self, bottom, top):
         conv_param = self.layer_param.convolution_param
 
+        bottom = bottom[0]
         channels, height, width = bottom[0].shape
         num_output = conv_param.num_output
         assert channels % self.group == 0, \

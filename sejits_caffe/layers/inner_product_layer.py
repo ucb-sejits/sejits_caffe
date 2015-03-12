@@ -7,7 +7,7 @@ class InnerProductLayer(BaseLayer):
     """docstring for InnerProductLayer"""
     def __init__(self, layer_param):
         super(InnerProductLayer, self).__init__(layer_param)
-        param = self.layer_param
+        param = self.layer_param.inner_product_param
         self.num_output = param.num_output
         self.bias_term = param.bias_term
         if self.bias_term:
