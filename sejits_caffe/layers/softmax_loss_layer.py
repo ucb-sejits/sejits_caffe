@@ -18,7 +18,7 @@ class SoftMaxLayer(BaseLayer):
         top[:] = bottom[:]
         for n in range(bottom.shape[0]):
             # Initialize scale to the first plane
-            scale = bottom[n][0]
+            scale = bottom[n, 0]
 
             for c in range(1, bottom.shape[1]):
                 scale = np.maximum(scale, bottom[n, c])
