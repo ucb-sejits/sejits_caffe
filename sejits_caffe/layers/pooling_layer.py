@@ -1,8 +1,16 @@
 from sejits_caffe.types import Array
 from sejits_caffe.operations import max_pool, meta
 from sejits_caffe.layers.base_layer import BaseLayer
+from sejits_caffe.types.array import specialize
 
 import numpy as np
+
+
+@specialize
+def max_pool_backward(top_diff, bottom_diff, mask):  # pragma: no cover
+    for y, x in top_diff.indices():
+        index = mask[y, x]
+        bottom_diff[index] += top_diff[y, x]
 
 
 class PoolingLayer(BaseLayer):
@@ -46,7 +54,15 @@ class PoolingLayer(BaseLayer):
         assert self.pad_h < self.kernel_h and self.pad_w < self.kernel_w, \
             "Padding dimensions should be smaller than kernel dimensions"
 
-    def setup(self, top, bottom):
+    def get_top_shape(self, bottom):
+        channels, height, width = bottom[0].shape
+        pooled_height = (height + 2 * self.pad_h - self.kernel_h) \
+            / self.stride_h + 1
+        pooled_width = (width + 2 * self.pad_w - self.kernel_w) \
+            / self.stride_w + 1
+        return bottom.shape[:2] + (pooled_height, pooled_width)
+
+    def setup(self, bottom, top):
         self.mask = Array.empty_like(top)
 
     @meta
@@ -58,3 +74,8 @@ class PoolingLayer(BaseLayer):
                          (self.kernel_h, self.kernel_w),
                          (self.pad_h, self.pad_w), (self.stride_h,
                          self.stride_w))
+
+    def backward(self, bottom_diff, top_diff):
+        for n in range(top.shape[0]):
+            for c in range(top.shape[1]):
+                max_pool_backward(top_diff[n, c], bottom_diff[n, c], mask[n, c])

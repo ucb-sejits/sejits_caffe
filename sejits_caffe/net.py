@@ -60,7 +60,6 @@ class Net(object):
             self.layers.append(layer)
         print(self.layers)
 
-
     def FilterNet(self, param, param_filtered):
         pass
 

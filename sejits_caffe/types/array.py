@@ -413,6 +413,20 @@ def smap2(func):
     return fn
 
 
+# def smap(func):
+#     """
+#     Wraps func with a specializer that will map over an array and call func on
+#     each element.
+#     TODO: Define a spec for types of functions supported by map.
+#     """
+#     @wraps(func)
+#     @specialize
+#     def fn(*args):
+#         for y, x in output.indices():
+#             args[-1][y, x] = func(*[arg[y, x] for arg in args[:-1]])
+#     return fn
+
+
 class Array(np.ndarray):
     """
     A thin wrapper around numpy arrays that provide specialized implementations

@@ -32,3 +32,4 @@ def max_pool(data, output, mask, kernel_size, padding=(0, 0), stride=(1, 1)):
         pool_cache[padding, stride, kernel_size] = \
             max_pool_factory(padding, stride, kernel_size)
     return pool_cache[padding, stride, kernel_size]
+

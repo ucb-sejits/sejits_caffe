@@ -32,12 +32,8 @@ class TestPoolingLayer(unittest.TestCase):
         param.pooling_param.kernel_size = 2
         param.pooling_param.stride = 1
         layer = PoolingLayer(param)
-        pooled_height = (height + 2 * layer.pad_h - layer.kernel_h) \
-            / layer.stride_h + 1
-        pooled_width = (width + 2 * layer.pad_w - layer.kernel_w) \
-            / layer.stride_w + 1
-        actual = Array.zeros((5, channels, pooled_height, pooled_width),
-                             np.int32)
+        actual_shape = layer.get_top_shape(bottom)
+        actual = Array.zeros(actual_shape, np.int32)
         layer.setup(bottom, actual)
         layer.forward(bottom, actual)
         for n in range(5):
