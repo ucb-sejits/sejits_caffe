@@ -1,5 +1,5 @@
 import unittest
-from sejits_caffe.types import Array
+from cstructures.array import Array
 from sejits_caffe.layers.softmax_loss_layer import SoftMaxLayer, \
     SoftMaxWithLossLayer
 import numpy as np

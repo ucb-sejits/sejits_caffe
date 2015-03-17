@@ -11,7 +11,7 @@ import ast
 import ctree.c.nodes as C
 from ctree.templates.nodes import StringTemplate
 from ctree.types import get_ctype
-from sejits_caffe.types import Array
+from cstructures.array import Array
 import numpy as np
 import ctypes as ct
 from collections import namedtuple

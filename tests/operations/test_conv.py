@@ -1,5 +1,5 @@
 import unittest
-from sejits_caffe.types import Array
+from cstructures.array import Array
 from sejits_caffe.operations.convolution import convolve
 from scipy import signal
 

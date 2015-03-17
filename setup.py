@@ -6,6 +6,7 @@ setup(
     install_requires=[
         'numpy',
         'ctree',
-        'protobuf'
+        'protobuf',
+        'cstructures'
     ]
 )

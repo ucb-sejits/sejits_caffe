@@ -20,7 +20,7 @@ import numpy as np
 from IPython import embed
 
 
-from sejits_caffe.types import Array
+from cstructures.array import Array
 
 
 class Net(object):

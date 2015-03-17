@@ -1,7 +1,7 @@
-from sejits_caffe.types import Array
+from ctree.types import Array
 from sejits_caffe.operations import max_pool, meta
 from sejits_caffe.layers.base_layer import BaseLayer
-from sejits_caffe.types.array import specialize
+from cstructures.array import specialize
 
 import numpy as np
 

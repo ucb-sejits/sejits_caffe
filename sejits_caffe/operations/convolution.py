@@ -1,4 +1,4 @@
-from sejits_caffe.types.array import specialize, specialized_dispatch
+from cstructures.array import specialize, specialized_dispatch
 
 
 def convolution_factory(padding, stride):

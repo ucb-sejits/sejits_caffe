@@ -1,4 +1,4 @@
-from sejits_caffe.types.array import specialized_dispatch, smap2
+from cstructures.array import specialized_dispatch, smap2
 
 
 def relu_factory(negative_slope):

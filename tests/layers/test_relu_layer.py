@@ -1,5 +1,5 @@
 import unittest
-from sejits_caffe.types import Array
+from cstructures.array import Array
 from sejits_caffe.layers.relu_layer import ReluLayer
 import sejits_caffe.caffe_pb2 as caffe_pb2
 from google.protobuf import text_format

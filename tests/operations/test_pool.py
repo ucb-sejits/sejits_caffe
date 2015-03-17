@@ -1,5 +1,5 @@
 from sejits_caffe.operations import max_pool
-from sejits_caffe.types import Array
+from cstructures.array import Array
 import unittest
 import numpy as np
 

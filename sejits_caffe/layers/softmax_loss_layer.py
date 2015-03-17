@@ -1,6 +1,6 @@
 from sejits_caffe.layers.loss_layer import LossLayer
 from sejits_caffe.layers.base_layer import BaseLayer
-from sejits_caffe.types import Array
+from cstructures.array import Array
 import sejits_caffe.caffe_pb2 as caffe_pb2
 import numpy as np
 

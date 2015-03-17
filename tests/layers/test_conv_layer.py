@@ -1,5 +1,5 @@
 from sejits_caffe.layers.conv_layer import ConvLayer
-from sejits_caffe.types import Array
+from cstructures.array import Array
 import numpy as np
 import sejits_caffe.caffe_pb2 as caffe_pb2
 from google.protobuf import text_format

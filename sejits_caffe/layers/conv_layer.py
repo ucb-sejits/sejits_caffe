@@ -3,7 +3,7 @@ import numpy as np
 import logging
 # from sejits_caffe.util.im2col import cpu_im2col, gpu_im2col
 from sejits_caffe.operations import convolve, meta
-from sejits_caffe.types import Array
+from cstructures.array import Array
 
 # from hindemith.operations.gemm import gemm
 # import ctypes
