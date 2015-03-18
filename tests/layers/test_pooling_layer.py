@@ -27,7 +27,7 @@ class TestPoolingLayer(unittest.TestCase):
                 bottom[n, c] = Array.array(
                     [[1, 2, 5, 2, 3],
                      [9, 4, 1, 4, 8],
-                     [1, 2, 5, 2, 3]], np.int32)
+                     [1, 2, 5, 2, 3]]).astype(np.int32)
         param = self.layer[5]
         param.pooling_param.kernel_size = 2
         param.pooling_param.stride = 1
@@ -43,21 +43,21 @@ class TestPoolingLayer(unittest.TestCase):
                     np.array([
                         [9, 5, 5, 8],
                         [9, 5, 5, 8]
-                    ], np.int32))
+                    ]).astype(np.int32))
         bottom = Array.zeros_like(bottom)
         for n in range(5):
             for c in range(channels):
                 actual[n, c] = Array.array(
                     [[1, 1, 1, 1],
-                     [1, 1, 1, 1]], np.int32)
+                     [1, 1, 1, 1]]).astype(np.int32)
         layer.backward(bottom, actual)
         for n in range(5):
             for c in range(channels):
                 np.testing.assert_array_equal(
                     bottom[n, c],
-                    [[0, 0, 2, 0, 0],
-                     [2, 0, 0, 0, 2],
-                     [0, 0, 2, 0, 0]], np.int32)
+                    np.array([[0, 0, 2, 0, 0],
+                              [2, 0, 0, 0, 2],
+                              [0, 0, 2, 0, 0]]).astype(np.int32))
 
 if __name__ == '__main__':
     unittest.main()
