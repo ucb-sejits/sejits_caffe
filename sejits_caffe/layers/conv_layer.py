@@ -149,7 +149,7 @@ class ConvLayer(BaseLayer):
                 for j in range(len(self.bias)):
                     # TODO: Add support for sugar
                     # top[i, j] += self.bias[j]
-                    Array.add(top[i, j], self.bias[j], top[i, j])
+                    top[i, j] += self.bias[j]
 
     def backward(self, top, propagate_down, bottom):
         pass

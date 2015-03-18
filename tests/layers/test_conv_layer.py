@@ -106,6 +106,7 @@ class ConvLayerTest(unittest.TestCase):
             conv_param.stride + 1
         actual_shape = (in_shape[0], num_output, height_out, width_out)
         expected_shape = (in_shape[0], num_output, height_out, width_out)
+        conv_param.bias_filler.value = 0
         conv = ConvLayer(param)
         expected_conv = NaiveConv(conv_param)
         actual = Array.zeros(actual_shape, np.float32)
