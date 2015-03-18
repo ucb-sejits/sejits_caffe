@@ -31,7 +31,8 @@ class LRNLayer(BaseLayer):
         alpha_over_size = self.alpha / self.size
 
         for n in range(bottom.shape[0]):
-            padded_square[self.pre_pad:bottom.shape[1]+self.pre_pad] = np.square(bottom[n])
+            padded_square[self.pre_pad:bottom.shape[1]+self.pre_pad] = \
+                np.square(bottom[n])
 
             for c in range(self.size):
                 self.scale[n] += alpha_over_size * padded_square[c]
@@ -45,3 +46,29 @@ class LRNLayer(BaseLayer):
                 self.scale[n, c] -= alpha_over_size * padded_square[c - 1]
 
         top[:] = np.power(self.scale, -self.beta) * bottom
+
+    def backward(self, bottom_data, bottom_diff, top_data, top_diff):
+        padded_ratio = Array.zeros(1, bottom_data.shape[1] + self.size - 1,
+                                   bottom_data.shape[2], bottom_data.shape[3])
+        accum_ratio = Array.zeros(1, 1, bottom_data.shape[2],
+                                  bottom_data.shape[3])
+        accum_ratio_times_bottom = Array.zeros(1, 1, bottom_data.shape[2],
+                                               bottom_data.shape[3])
+        cache_ratio_value = 2.0 * self.apha * self.beta / self.size
+        bottom_diff = np.pow(self.scale, -self.beta)
+        bottom_diff *= top_diff
+
+        inverse_pre_pad = self.size - (self.size + 1) / 2
+        for n in range(bottom_data.shape[0]):
+            padded_ratio[0, inverse_pre_pad] = top_diff[n] * top_data[n]
+            padded_ratio[0, inverse_pre_pad] /= self.scale[n]
+            accum_ratio.fill(0)
+            for c in range(self.size - 1):
+                accum_ratio += padded_ratio[0, c]
+
+            for c in range(bottom_data.shape[1]):
+                accum_ratio += padded_ratio[0, c + self.size - 1]
+                accum_ratio_times_bottom += bottom_data[n, c] * accum_ratio
+                bottom_data[n, c] += -cache_ratio_value * \
+                    accum_ratio_times_bottom
+                accum_ratio += -1 * padded_ratio[0, c]
