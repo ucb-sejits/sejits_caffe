@@ -98,20 +98,13 @@ class ConvLayerTest(unittest.TestCase):
 
     def _forward_test(self, param, in_shape):
         conv_param = param.convolution_param
-        num_output = conv_param.num_output
-        kernel_size = conv_param.kernel_size
-        height_out = (in_shape[2] + 2 * conv_param.pad - kernel_size) // \
-            conv_param.stride + 1
-        width_out = (in_shape[3] + 2 * conv_param.pad - kernel_size) // \
-            conv_param.stride + 1
-        actual_shape = (in_shape[0], num_output, height_out, width_out)
-        expected_shape = (in_shape[0], num_output, height_out, width_out)
+        in_batch = Array.rand(*in_shape).astype(np.float32) * 255
         conv_param.bias_filler.value = 0
         conv = ConvLayer(param)
+        top_shape = conv.get_top_shape(in_batch)
         expected_conv = NaiveConv(conv_param)
-        actual = Array.zeros(actual_shape, np.float32)
-        expected = Array.zeros(expected_shape, np.float32)
-        in_batch = Array.rand(*in_shape).astype(np.float32) * 255
+        actual = Array.zeros(top_shape, np.float32)
+        expected = Array.zeros(top_shape, np.float32)
 
         conv.set_up(in_batch, actual)
         conv.forward(in_batch, actual)

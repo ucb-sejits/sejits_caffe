@@ -25,7 +25,7 @@ class TestReluLayer(unittest.TestCase):
             5, channels, height, width).astype(np.float32)
         bottom = bottom * 256 - 128
         layer = ReluLayer(self.layer[3])
-        actual = Array.zeros(bottom.shape, np.float32)
+        actual = Array.zeros(layer.get_top_shape(bottom), np.float32)
         layer.forward(bottom, actual)
         expected = np.clip(bottom, 0.0, float('inf')).astype(np.float32)
         np.testing.assert_allclose(actual, expected)
@@ -39,8 +39,8 @@ class TestReluLayer(unittest.TestCase):
         bottom = bottom * 256 - 128
 
         top_diff = Array.rand(
-            5, channels, height,width).astype(np.float32)
-        top_diff = top_diff * 256 -128
+            5, channels, height, width).astype(np.float32)
+        top_diff = top_diff * 256 - 128
 
         top = np.zeros(top_diff.shape, np.float32)
         actual = Array.zeros(bottom.shape, np.float32)
@@ -48,7 +48,9 @@ class TestReluLayer(unittest.TestCase):
         layer = ReluLayer(self.layer[3])
         layer.backward(bottom, actual, top, top_diff)
 
-        expected = np.multiply(top_diff, np.greater(bottom, Array.zeros(bottom.shape, np.float32)))
+        expected = np.multiply(top_diff,
+                               np.greater(bottom, Array.zeros(bottom.shape,
+                                                              np.float32)))
 
         np.testing.assert_allclose(actual, expected)
 

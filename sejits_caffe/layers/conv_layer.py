@@ -96,6 +96,14 @@ class ConvLayer(BaseLayer):
         self.bias_term = None
         self.bias = None
 
+    def get_top_shape(self, bottom):
+        conv_param = self.layer_param.convolution_param
+        height_out = (bottom.shape[2] + 2 * self.padding[0] - self.kernel_h) // \
+            self.stride[0] + 1
+        width_out = (bottom.shape[3] + 2 * self.padding[1] - self.kernel_w) // \
+            self.stride[1] + 1
+        return bottom.shape[0], conv_param.num_output, height_out, width_out
+
     def set_up(self, bottom, top):
         conv_param = self.layer_param.convolution_param
 
@@ -121,7 +129,6 @@ class ConvLayer(BaseLayer):
                 raise Exception("Filler not implemented for weight filler \
                     type {}".format(weight_filler.type))
             if self.bias_term:
-                # FIXME: This should be a 1d array
                 self.bias = Array((num_output, ), np.float32)
                 filler = conv_param.bias_filler
                 if filler.type == 'constant':

@@ -31,7 +31,7 @@ class InnerProductLayer(BaseLayer):
                             "type {}".format(weight_filler.type))
 
     def forward(self, bottom, top):
-        top[:] = np.dot(bottom, self.weights)
+        top[:] = np.dot(bottom, self.weights.T)
         if self.bias_term:
             top += self.bias
 
