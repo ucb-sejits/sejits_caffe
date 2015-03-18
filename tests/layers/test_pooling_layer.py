@@ -44,7 +44,20 @@ class TestPoolingLayer(unittest.TestCase):
                         [9, 5, 5, 8],
                         [9, 5, 5, 8]
                     ], np.int32))
-
+        bottom = Array.zeros_like(bottom)
+        for n in range(5):
+            for c in range(channels):
+                actual[n, c] = Array.array(
+                    [[1, 1, 1, 1],
+                     [1, 1, 1, 1]], np.int32)
+        layer.backward(bottom, actual)
+        for n in range(5):
+            for c in range(channels):
+                np.testing.assert_array_equal(
+                    bottom[n, c],
+                    [[0, 0, 2, 0, 0],
+                     [2, 0, 0, 0, 2],
+                     [0, 0, 2, 0, 0]], np.int32)
 
 if __name__ == '__main__':
     unittest.main()

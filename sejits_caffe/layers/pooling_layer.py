@@ -3,8 +3,6 @@ from sejits_caffe.operations import max_pool, meta
 from sejits_caffe.layers.base_layer import BaseLayer
 from cstructures.array import specialize
 
-import numpy as np
-
 
 @specialize
 def max_pool_backward(top_diff, bottom_diff, mask):  # pragma: no cover
@@ -63,7 +61,7 @@ class PoolingLayer(BaseLayer):
         return bottom.shape[:2] + (pooled_height, pooled_width)
 
     def setup(self, bottom, top):
-        self.mask = Array.empty_like(top)
+        self.mask = Array.zeros_like(top)
 
     @meta
     def forward(self, bottom, top):
@@ -76,6 +74,7 @@ class PoolingLayer(BaseLayer):
                          self.stride_w))
 
     def backward(self, bottom_diff, top_diff):
-        for n in range(top.shape[0]):
-            for c in range(top.shape[1]):
-                max_pool_backward(top_diff[n, c], bottom_diff[n, c], mask[n, c])
+        for n in range(top_diff.shape[0]):
+            for c in range(top_diff.shape[1]):
+                max_pool_backward(top_diff[n, c], bottom_diff[n, c],
+                                  self.mask[n, c])
