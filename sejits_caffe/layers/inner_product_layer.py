@@ -34,3 +34,12 @@ class InnerProductLayer(BaseLayer):
         top[:] = np.dot(bottom, self.weights)
         if self.bias_term:
             top += self.bias
+
+    def backward(self, bottom_data, bottom_diff, top_diff):
+        if self.propagate_down:
+            bottom_diff[:] = np.dot(bottom_diff, bottom_data, self.weights)
+        if self.bias_term:
+            self.bias = np.dot(top_diff, self.bias_multiplier)
+
+        if self.propagate_down:
+            bottom_data[:] = np.dot(top_diff, self.weights)

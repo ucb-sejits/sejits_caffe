@@ -1,6 +1,8 @@
 class BaseLayer(object):
     def __init__(self, param):
         self.layer_param = param
+        self.propagate_down = True
+        self.phase = 'train'
         self.blobs = []
         # TODO:  Initialize with proto blob
 
