@@ -99,7 +99,6 @@ class ConvLayerTest(unittest.TestCase):
     def _forward_test(self, param, in_shape):
         conv_param = param.convolution_param
         in_batch = Array.rand(*in_shape).astype(np.float32) * 255
-        conv_param.bias_filler.value = 0
         conv = ConvLayer(param)
         top_shape = conv.get_top_shape(in_batch)
         expected_conv = NaiveConv(conv_param)

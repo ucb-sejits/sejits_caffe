@@ -247,6 +247,10 @@ class ConvLayer(BaseLayer):
                     weights[g*weight_offset:(g+1)*weight_offset].dot(
                         col_data[g*col_offset:(g+1)*col_offset])
                 ).reshape(top_data[g*top_offset:(g+1)*top_offset].shape)
+
+            if self.bias_term:
+                for output_data, bias in zip(top_data, self.bias):
+                    output_data += bias
         # out_groups = top.shape[1] // self.group
         # in_groups = bottom.shape[1] // self.group
         # for i in range(len(top)):
