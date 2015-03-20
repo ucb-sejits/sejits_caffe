@@ -63,7 +63,7 @@ class PoolingLayer(BaseLayer):
     def setup(self, bottom, top):
         self.mask = Array.zeros_like(top)
 
-    @meta
+    # @meta
     def forward(self, bottom, top):
         for n in range(bottom.shape[0]):
             for channel in range(bottom.shape[1]):
