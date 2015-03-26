@@ -36,7 +36,6 @@ class SoftMaxLayer(BaseLayer):
                 top[n, j] /= scale
 
 
-
 class SoftMaxWithLossLayer(LossLayer):
     """docstring for SoftMaxWithLossLayer"""
     def __init__(self, param):
@@ -71,3 +70,24 @@ class SoftMaxWithLossLayer(LossLayer):
             top[0] = loss / count
         else:
             top[0] = loss / bottom_data.shape[0]
+
+    def backward(self, bottom_diff, bottom_label, top_diff):
+        label = bottom_label
+        bottom_diff[:] = self.prob
+        count = 0
+        if self.propagate_down:
+            for i in range(self.prob.shape[0]):
+                for j in range(self.prob.shape[2]):
+                    for k in range(self.prob.shape[3]):
+                        label_val = label[i, 0, j, k]
+                        if self.ignore_label == label_val:
+                            bottom_diff[i, ..., j, k] = 0
+                        else:
+                            bottom_diff[i, label_val, j, k] -= 1
+                            count += 1
+
+            loss_weight = top_diff[0]
+            if self.normalize:
+                bottom_diff *= loss_weight / count
+            else:
+                bottom_diff *= loss_weight / bottom_diff.shape[0]
