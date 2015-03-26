@@ -8,7 +8,7 @@ def max_pool_factory(padding, stride, kernel_size):
 
     @specialize
     def max_pool(data, output, mask):  # pragma: no cover
-        for y, x in output.indices():
+        for y, x in output.indices(parallel=True, cache_block=True):
             y_start = max(y * stride_h - pad_h, 0)
             x_start = max(x * stride_w - pad_w, 0)
             y_end = min(y_start + kernel_h, data.shape[0])
@@ -32,4 +32,3 @@ def max_pool(data, output, mask, kernel_size, padding=(0, 0), stride=(1, 1)):
         pool_cache[padding, stride, kernel_size] = \
             max_pool_factory(padding, stride, kernel_size)
     return pool_cache[padding, stride, kernel_size]
-
