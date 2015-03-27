@@ -2,8 +2,8 @@ from sejits_caffe.layers.base_layer import BaseLayer
 from cstructures import Array
 import numpy as np
 
-import os
-os.environ['LMDB_FORCE_CFFI'] = '1'
+# import os
+# os.environ['LMDB_FORCE_CFFI'] = '1'
 
 import lmdb
 import sejits_caffe.caffe_pb2 as caffe_pb2
@@ -21,12 +21,10 @@ class DataTransformer(object):
                 blob_proto.ParseFromString(f.read())
                 shape = blob_proto.num, blob_proto.channels, \
                     blob_proto.width, blob_proto.height
-                self.mean = Array.zeros(shape, np.float32)
-                for i, j, k, l in itertools.product(shape):
-                    index = i * np.prod(self.mean.shape[1:]) + j * \
-                        np.prod(self.mean.shape[2:]) + k * \
-                        np.prod(self.mean.shape[3:]) + l
-                    self.mean[i, j, k, l] = blob_proto.data[index]
+                # FIXME: Assuming float32
+                self.mean = Array.array(blob_proto.data._values).reshape(
+                    shape).astype(np.float32)
+                print(self.mean.dtype)
         else:
             raise NotImplementedError()
 

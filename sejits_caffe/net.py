@@ -37,12 +37,15 @@ class Net(object):
     }
 
     def __init__(self, param_file):
+        self.phase = 'TRAIN'
         # importing net param from .prototxt
         self.param = caffe_pb2.NetParameter()
         param_string = open(param_file).read()
         text_format.Merge(param_string, self.param)
         self.layers = []
         self.blobs = {}
+        data_layers = self.get_data_layers_for_phase(self.param.layer)
+        print(data_layers)
         for layer_param in self.param.layer:
             bottom = []
             top = []
@@ -59,6 +62,10 @@ class Net(object):
             layer.setup(*(bottom + top))
             self.layers.append(layer)
         print(self.layers)
+
+    def get_data_layers_for_phase(self, layers):
+        return filter(lambda x: x.type == "Data" and
+                      x.include.phase == self.phase, layers)
 
     def FilterNet(self, param, param_filtered):
         pass
