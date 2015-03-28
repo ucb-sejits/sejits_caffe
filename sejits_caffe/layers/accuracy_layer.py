@@ -12,6 +12,9 @@ class AccuracyLayer(BaseLayer):
     def setup(self, bottom_data, bottom_label, top):
         pass
 
+    def get_top_shape(self, bottom_data, bottom_label):
+        return (1, )
+
     def forward(self, bottom_data, bottom_label, top):
         accuracy = 0
         data = bottom_data

@@ -30,6 +30,9 @@ class InnerProductLayer(BaseLayer):
             raise Exception("Filler not implemented for weight filler"
                             "type {}".format(weight_filler.type))
 
+    def get_top_shape(self, bottom):
+        return bottom.shape[0], self.num_output
+
     def forward(self, bottom, top):
         top[:] = np.dot(bottom, self.weights.T)
         if self.bias_term:

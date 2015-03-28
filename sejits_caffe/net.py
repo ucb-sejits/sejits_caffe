@@ -48,28 +48,32 @@ class Net(object):
         for layer_param in data_layers:
             layer = DataLayer(layer_param)
             top_shape = layer.get_top_shape()
-            print(top_shape)
+            for blob in layer_param.top:
+                self.add_blob(blob, top_shape)
+        print(self.blobs.keys())
         print(data_layers)
         for layer_param in self.param.layer:
-            if layer_param in data_layers:
+            if layer_param.type == "Data":
                 continue
             bottom = []
             top = []
             for blob in layer_param.bottom:
                 if blob not in self.blobs:
-                    self.blobs[blob] = Array.zeros((5, 4, 256, 256),
-                                                   np.float32)
+                    raise Exception("Found uninitialized blob {}".format(blob))
                 bottom.append(self.blobs[blob])
+            layer = self.layer_type_map[layer_param.type](layer_param)
+            top_shape = layer.get_top_shape(*bottom)
             for blob in layer_param.top:
                 if blob not in self.blobs:
-                    self.blobs[blob] = Array.zeros((5, 4, 256, 256),
-                                                   np.float32)
+                    self.add_blob(blob, top_shape)
                 top.append(self.blobs[blob])
-            layer = self.layer_type_map[layer_param.type](layer_param)
             # print(layer_param.type)
             layer.setup(*(bottom + top))
             self.layers.append(layer)
         # print(self.layers)
+
+    def add_blob(self, blob, shape):
+        self.blobs[blob] = Array.zeros(shape, np.float32)
 
     def get_data_layers_for_phase(self, layers):
         # TODO: Do we need to handle more than 1 includes?

@@ -13,6 +13,9 @@ class DropoutLayer(BaseLayer):
         self.mask = None
         self.phase = 'train'
 
+    def get_top_shape(self, bottom):
+        return bottom.shape
+
     def forward(self, bottom, top):
         self.mask = np.random.binomial(bottom.shape[0], 1.0 - self.threshold,
                                        bottom.shape)

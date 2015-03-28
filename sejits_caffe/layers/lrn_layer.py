@@ -20,6 +20,9 @@ class LRNLayer(BaseLayer):
     def setup(self, bottom, top):
         self.scale = Array.zeros_like(bottom)
 
+    def get_top_shape(self, bottom):
+        return bottom.shape
+
     def forward(self, bottom, top):
         # initialize scale to constant value
         self.scale.fill(self.k)

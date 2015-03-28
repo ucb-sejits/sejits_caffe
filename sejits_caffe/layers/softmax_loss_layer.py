@@ -50,6 +50,9 @@ class SoftMaxWithLossLayer(LossLayer):
         self.prob = Array.zeros_like(bottom_data)
         self.softmax_layer.setup(bottom_data, self.prob)
 
+    def get_top_shape(self, *args):
+        return (1, )
+
     def forward(self, bottom_data, bottom_label, top):
         self.softmax_layer.forward(bottom_data, self.prob)
         label = bottom_label
