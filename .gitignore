@@ -12,3 +12,4 @@ venv
 compiled
 libclBLAS.*
 src
+data
