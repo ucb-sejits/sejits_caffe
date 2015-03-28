@@ -48,10 +48,12 @@ class Net(object):
         for layer_param in data_layers:
             layer = DataLayer(layer_param)
             top_shape = layer.get_top_shape()
+            top = []
             for blob in layer_param.top:
                 self.add_blob(blob, top_shape)
-        print(self.blobs.keys())
-        print(data_layers)
+                top.append(self.blobs[blob])
+            layer.setup(*top)
+            self.layers.append(layer)
         for layer_param in self.param.layer:
             if layer_param.type == "Data":
                 continue
@@ -71,6 +73,21 @@ class Net(object):
             layer.setup(*(bottom + top))
             self.layers.append(layer)
         # print(self.layers)
+
+    def forward(self):
+        loss = 0
+        for layer in self.layers:
+            layer_param = layer.layer_param
+            print(layer_param.type)
+            bottom = []
+            top = []
+            for blob in layer_param.bottom:
+                bottom.append(self.blobs[blob])
+            for blob in layer_param.top:
+                top.append(self.blobs[blob])
+            loss += layer.forward(*(bottom + top))
+        print("Loss: {}".format(loss))
+        return loss
 
     def add_blob(self, blob, shape):
         self.blobs[blob] = Array.zeros(shape, np.float32)
@@ -100,7 +117,7 @@ def main(argv):
         raise Exception('Usage: model .prototxt file')
     else:
         n = Net(sys.argv[1])
-    print(n)
+    n.forward()
 
 #     L1 = ConvLayer(n.param.layer[2])
 #     L2 = ConvLayer(n.param.layer[6])

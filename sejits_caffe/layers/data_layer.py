@@ -18,12 +18,9 @@ class DataTransformer(object):
             blob_proto = caffe_pb2.BlobProto()
             with open(param.mean_file, "rb") as f:
                 blob_proto.ParseFromString(f.read())
-                shape = blob_proto.num, blob_proto.channels, \
-                    blob_proto.width, blob_proto.height
                 # FIXME: Assuming float32
-                self.mean = Array.array(blob_proto.data._values).reshape(
-                    shape).astype(np.float32)
-                print(self.mean.dtype)
+                self.mean = Array.array(
+                    blob_proto.data._values).astype(np.float32)
         else:
             raise NotImplementedError()
 
@@ -40,14 +37,17 @@ class DataTransformer(object):
         if crop_size:
             height = crop_size
             width = crop_size
-            if self.phase == 'TRAIN':
+            if self.phase == "train":
                 h_off = random.randrange(datum_height - crop_size + 1)
                 w_off = random.randrange(datum_width - crop_size + 1)
             else:
                 h_off = (datum_height - crop_size) / 2
                 w_off = (datum_width - crop_size) / 2
 
-        transformed_data = Array.zeros((channels, height, width), np.float32)
+        transformed_data = Array.zeros(
+            np.prod((channels, height, width)), np.float32)
+
+        data = Array.fromstring(datum.data, dtype=np.uint8).astype(np.float32)
 
         for c in range(channels):
             for h in range(height):
@@ -59,13 +59,14 @@ class DataTransformer(object):
                     else:
                         top_index = (c * height + h) * width + w
 
-                    datum_element = datum.float_data(data_index)
+                    datum_element = data[data_index]
 
                     if self.param.HasField("mean_file"):
                         transformed_data[top_index] = \
                             (datum_element - self.mean[data_index]) * scale
                     else:
                         raise NotImplementedError()
+        return transformed_data.reshape((channels, height, width))
 
 
 class DataLayer(BaseLayer):
@@ -73,16 +74,16 @@ class DataLayer(BaseLayer):
         backend = self.layer_param.data_param.backend
         if backend == caffe_pb2.DataParameter.LMDB:
             self.db = lmdb.open(self.layer_param.data_param.source)
-            with self.db.begin() as txn:
-                self.cursor = txn.cursor().iternext()
-                datum = caffe_pb2.Datum()
-                datum.ParseFromString(next(self.cursor)[1])
-                crop_size = self.layer_param.transform_param.crop_size
-                if crop_size > 0:
-                    return self.layer_param.data_param.batch_size, \
-                        datum.channels, crop_size, crop_size
-                else:
-                    raise NotImplementedError()
+            txn = self.db.begin()
+            self.cursor = txn.cursor().iternext()
+            datum = caffe_pb2.Datum()
+            datum.ParseFromString(next(self.cursor)[1])
+            crop_size = self.layer_param.transform_param.crop_size
+            if crop_size > 0:
+                return self.layer_param.data_param.batch_size, \
+                    datum.channels, crop_size, crop_size
+            else:
+                raise NotImplementedError()
         else:
             raise NotImplementedError(backend)
 
@@ -90,10 +91,10 @@ class DataLayer(BaseLayer):
         self.data_transformer = \
             DataTransformer(self.layer_param.transform_param, self.phase)
 
-    def forward(self, bottom, top, top_label):
+    def forward(self, top, top_label):
         datum = caffe_pb2.Datum()
         batch_size = self.layer_param.data_param.batch_size
         for i in range(batch_size):
-            datum = datum.ParseFromString(next(self.cursor))
+            datum.ParseFromString(next(self.cursor)[1])
             top[i] = self.data_transformer.transform(datum)
             top_label[i] = datum.label
