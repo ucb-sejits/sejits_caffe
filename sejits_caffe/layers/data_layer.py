@@ -7,7 +7,6 @@ import numpy as np
 
 import lmdb
 import sejits_caffe.caffe_pb2 as caffe_pb2
-import itertools
 import random
 
 
@@ -72,13 +71,12 @@ class DataTransformer(object):
 class DataLayer(BaseLayer):
     def get_top_shape(self):
         backend = self.layer_param.data_param.backend
-        if backend == 'lmdb':
+        if backend == caffe_pb2.DataParameter.LMDB:
             self.db = lmdb.open(self.layer_param.data_param.source)
             with self.db.begin() as txn:
-                cursor = txn.cursor()
-                self.cursor = iter(cursor)
+                self.cursor = txn.cursor().iternext()
                 datum = caffe_pb2.Datum()
-                datum = datum.ParseFromString(next(self.cursor))
+                datum.ParseFromString(next(self.cursor)[1])
                 crop_size = self.layer_param.transform_param.crop_size
                 if crop_size > 0:
                     return self.layer_param.data_param.batch_size, \

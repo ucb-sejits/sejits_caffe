@@ -13,7 +13,7 @@ layer {
     mean_file: "data/ilsvrc12/imagenet_mean.binaryproto"
   }
   data_param {
-    source: "examples/imagenet/ilsvrc12_train_lmdb"
+    source: "/storage2/datasets/ilsvrc2012_train_256x256_lmdb"
     batch_size: 256
     backend: LMDB
   }

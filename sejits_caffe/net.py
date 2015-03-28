@@ -2,7 +2,7 @@
 """
 Draw a graph of the net architecture.
 """
-import os
+# import os
 from google.protobuf import text_format
 import caffe_pb2
 
@@ -17,10 +17,10 @@ from layers.accuracy_layer import AccuracyLayer
 from layers.softmax_loss_layer import SoftMaxWithLossLayer
 import numpy as np
 
-from IPython import embed
-
-
 from cstructures.array import Array
+
+
+TRAIN = caffe_pb2.TRAIN
 
 
 class Net(object):
@@ -37,7 +37,7 @@ class Net(object):
     }
 
     def __init__(self, param_file):
-        self.phase = 'TRAIN'
+        self.phase = TRAIN
         # importing net param from .prototxt
         self.param = caffe_pb2.NetParameter()
         param_string = open(param_file).read()
@@ -45,35 +45,46 @@ class Net(object):
         self.layers = []
         self.blobs = {}
         data_layers = self.get_data_layers_for_phase(self.param.layer)
+        for layer_param in data_layers:
+            layer = DataLayer(layer_param)
+            top_shape = layer.get_top_shape()
+            print(top_shape)
         print(data_layers)
         for layer_param in self.param.layer:
+            if layer_param in data_layers:
+                continue
             bottom = []
             top = []
             for blob in layer_param.bottom:
                 if blob not in self.blobs:
-                    self.blobs[blob] = Array.zeros((5, 4, 256, 256), np.float32)
+                    self.blobs[blob] = Array.zeros((5, 4, 256, 256),
+                                                   np.float32)
                 bottom.append(self.blobs[blob])
             for blob in layer_param.top:
                 if blob not in self.blobs:
-                    self.blobs[blob] = Array.zeros((5, 4, 256, 256), np.float32)
+                    self.blobs[blob] = Array.zeros((5, 4, 256, 256),
+                                                   np.float32)
                 top.append(self.blobs[blob])
             layer = self.layer_type_map[layer_param.type](layer_param)
-            print(layer_param.type)
+            # print(layer_param.type)
             layer.setup(*(bottom + top))
             self.layers.append(layer)
-        print(self.layers)
+        # print(self.layers)
 
     def get_data_layers_for_phase(self, layers):
+        # TODO: Do we need to handle more than 1 includes?
         return filter(lambda x: x.type == "Data" and
-                      x.include.phase == self.phase, layers)
+                      x.include[0].phase == self.phase, layers)
 
     def FilterNet(self, param, param_filtered):
         pass
 
-    def AppendTop(self, param, layer_id, top_id, available_blobs, blob_name_to_idx):
+    def AppendTop(self, param, layer_id, top_id, available_blobs,
+                  blob_name_to_idx):
         pass
 
-    def AppendBottom(self, param, layer_id, bottom_id, available_blobs, blob_name_to_idx):
+    def AppendBottom(self, param, layer_id, bottom_id, available_blobs,
+                     blob_name_to_idx):
         pass
 
     def Initialize(self, in_param):
@@ -85,7 +96,7 @@ def main(argv):
         raise Exception('Usage: model .prototxt file')
     else:
         n = Net(sys.argv[1])
-    embed()
+    print(n)
 
 #     L1 = ConvLayer(n.param.layer[2])
 #     L2 = ConvLayer(n.param.layer[6])
