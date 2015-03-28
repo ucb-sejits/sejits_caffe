@@ -85,8 +85,8 @@ class Net(object):
                 bottom.append(self.blobs[blob])
             for blob in layer_param.top:
                 top.append(self.blobs[blob])
-            loss += layer.forward(*(bottom + top))
-        print("Loss: {}".format(loss))
+            layer.forward(*(bottom + top))
+        # print("Loss: {}".format(loss))
         return loss
 
     def add_blob(self, blob, shape):
@@ -96,20 +96,6 @@ class Net(object):
         # TODO: Do we need to handle more than 1 includes?
         return filter(lambda x: x.type == "Data" and
                       x.include[0].phase == self.phase, layers)
-
-    def FilterNet(self, param, param_filtered):
-        pass
-
-    def AppendTop(self, param, layer_id, top_id, available_blobs,
-                  blob_name_to_idx):
-        pass
-
-    def AppendBottom(self, param, layer_id, bottom_id, available_blobs,
-                     blob_name_to_idx):
-        pass
-
-    def Initialize(self, in_param):
-        pass
 
 
 def main(argv):

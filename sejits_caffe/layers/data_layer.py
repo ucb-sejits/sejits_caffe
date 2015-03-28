@@ -30,7 +30,7 @@ class DataTransformer(object):
 
         crop_size = self.param.crop_size
         do_mirror = self.param.mirror
-        scale = self.param.scale
+        # scale = self.param.scale
         height = datum_height
         width = datum_width
 
@@ -47,26 +47,34 @@ class DataTransformer(object):
         transformed_data = Array.zeros(
             np.prod((channels, height, width)), np.float32)
 
-        data = Array.fromstring(datum.data, dtype=np.uint8).astype(np.float32)
+        data = Array.fromstring(
+            datum.data, dtype=np.uint8).astype(
+                np.float32).reshape(channels, datum_height, datum_width)
+        transformed_data = data[..., h_off:h_off + height, w_off:w_off + width]
+        if do_mirror:
+            for c in range(channels):
+                transformed_data[c] = np.fliplr(transformed_data[c])
 
-        for c in range(channels):
-            for h in range(height):
-                for w in range(width):
-                    data_index = (c * datum_height + h_off + h) * datum_width \
-                        + w_off + w
-                    if do_mirror:
-                        top_index = (c * height + h) * width + (width - 1 - w)
-                    else:
-                        top_index = (c * height + h) * width + w
+        return transformed_data
+        # for c in range(channels):
+        #     for h in range(height):
+        #         for w in range(width):
+        #             data_index = (c * datum_height + h_off + h) *
+        #                 datum_width + w_off + w
+        #             if do_mirror:
+        #                 top_index = (c * height + h) * width + \
+        #                       (width - 1 - w)
+        #             else:
+        #                 top_index = (c * height + h) * width + w
 
-                    datum_element = data[data_index]
+        #             datum_element = data[data_index]
 
-                    if self.param.HasField("mean_file"):
-                        transformed_data[top_index] = \
-                            (datum_element - self.mean[data_index]) * scale
-                    else:
-                        raise NotImplementedError()
-        return transformed_data.reshape((channels, height, width))
+        #             if self.param.HasField("mean_file"):
+        #                 transformed_data[top_index] = \
+        #                     (datum_element - self.mean[data_index]) * scale
+        #             else:
+        #                 raise NotImplementedError()
+        # return transformed_data.reshape((channels, height, width))
 
 
 class DataLayer(BaseLayer):
@@ -95,6 +103,7 @@ class DataLayer(BaseLayer):
         datum = caffe_pb2.Datum()
         batch_size = self.layer_param.data_param.batch_size
         for i in range(batch_size):
+            print("data layer batch: ", i)
             datum.ParseFromString(next(self.cursor)[1])
             top[i] = self.data_transformer.transform(datum)
             top_label[i] = datum.label
