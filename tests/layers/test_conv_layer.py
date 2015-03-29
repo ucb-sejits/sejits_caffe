@@ -105,7 +105,7 @@ class ConvLayerTest(unittest.TestCase):
         actual = Array.zeros(top_shape, np.float32)
         expected = Array.zeros(top_shape, np.float32)
 
-        conv.set_up(in_batch, actual)
+        conv.setup(in_batch, actual)
         conv.forward(in_batch, actual)
         expected_conv(in_batch, conv.weights, conv.bias, expected)
         self._check(actual, expected)
