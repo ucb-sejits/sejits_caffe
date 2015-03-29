@@ -107,7 +107,7 @@ class ConvLayer(BaseLayer):
             self.stride[1] + 1
         return bottom.shape[0], conv_param.num_output, height_out, width_out
 
-    def set_up(self, bottom, top):
+    def setup(self, bottom, top):
         conv_param = self.layer_param.convolution_param
 
         channels, height, width = bottom[0].shape
@@ -153,10 +153,10 @@ class ConvLayer(BaseLayer):
             weight_offset = top_data.shape[0] // self.group
             top_offset = top_data.shape[0] // self.group
             for g in range(self.group):
-                top_data[g*top_offset:(g+1)*top_offset] = (
-                    weights[g*weight_offset:(g+1)*weight_offset].dot(
-                        self.col_data[g*col_offset:(g+1)*col_offset])
-                ).reshape(top_data[g*top_offset:(g+1)*top_offset].shape)
+                top_data[g * top_offset:(g + 1) * top_offset] = (
+                    weights[g * weight_offset:(g + 1) * weight_offset].dot(
+                        self.col_data[g * col_offset:(g + 1) * col_offset])
+                ).reshape(top_data[g * top_offset:(g + 1) * top_offset].shape)
 
             if self.bias_term:
                 for output_data, bias in zip(top_data, self.bias):
@@ -198,18 +198,20 @@ class ConvLayer(BaseLayer):
                     col_offset = self.col_data.shape[0] // self.group
                     weight_offset = top_data.shape[0] // self.group
                     top_offset = top_data.shape[0] // self.group
+                    # TODO: Clean this up with helper functions
                     for g in range(self.group):
-                        self.weight_diff[i, g*weight_offset:(g+1)*weight_offset] += \
-                            top_diff[i, g*top_offset:(g+1)*top_offset].dot(
+                        self.weight_diff[i, g * weight_offset:(g + 1) * weight_offset] += \
+                            top_diff[i, g * top_offset:
+                                     (g + 1) * top_offset].dot(
                                 self.col_data[
-                                    i, g*col_offset:(g+1)*col_offset])
+                                    i, g * col_offset:(g + 1) * col_offset])
 
                     for g in range(self.group):
-                        self.col_data[g*col_offset:(g+1)*col_offset] = \
+                        self.col_data[g * col_offset:(g + 1) * col_offset] = \
                             self.weights[
-                                g*weight_offset:(g+1)*weight_offset].dot(
-                                    self.top_diff[
-                                        n, g*top_offset:(g+1)*top_offset])
+                                g * weight_offset:(g + 1) * weight_offset].dot(
+                                    self.top_diff[n, g * top_offset:
+                                                  (g + 1) * top_offset])
                     bottom_diff[i] = self.col2im(self.col_data,
                                                  self.kernel_size,
                                                  self.padding, self.stride)

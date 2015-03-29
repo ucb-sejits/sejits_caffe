@@ -34,19 +34,20 @@ class LRNLayer(BaseLayer):
         alpha_over_size = self.alpha / self.size
 
         for n in range(bottom.shape[0]):
-            padded_square[self.pre_pad:bottom.shape[1]+self.pre_pad] = \
+            padded_square[self.pre_pad:bottom.shape[1] + self.pre_pad] = \
                 np.square(bottom[n])
 
             for c in range(self.size):
                 self.scale[n] += alpha_over_size * padded_square[c]
 
-            for c in range(1, bottom.shape[1]):
-                self.scale[n, c] = self.scale[n, c - 1]
-
-                self.scale[n, c] += \
-                    alpha_over_size * padded_square[c + self.size - 1]
-
-                self.scale[n, c] -= alpha_over_size * padded_square[c - 1]
+            # for c in range(1, bottom.shape[1]):
+            #     self.scale[n, c] = self.scale[n, c - 1] + \
+            #         alpha_over_size * padded_square[c + self.size - 1] - \
+            #         alpha_over_size * padded_square[c - 1]
+            print('asdfasdf', c)
+            self.scale[n, 1:] = self.scale[n, :-1] + \
+                alpha_over_size * padded_square[self.size:self.size + bottom.shape[1] - 1] - \
+                alpha_over_size * padded_square[:bottom.shape[1] - 1]
 
         top[:] = np.power(self.scale, -self.beta) * bottom
 

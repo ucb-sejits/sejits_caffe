@@ -18,6 +18,7 @@ from layers.softmax_loss_layer import SoftMaxWithLossLayer
 import numpy as np
 
 from cstructures.array import Array
+from ctree.util import Timer
 
 
 TRAIN = caffe_pb2.TRAIN
@@ -78,14 +79,15 @@ class Net(object):
         loss = 0
         for layer in self.layers:
             layer_param = layer.layer_param
-            print(layer_param.type)
             bottom = []
             top = []
             for blob in layer_param.bottom:
                 bottom.append(self.blobs[blob])
             for blob in layer_param.top:
                 top.append(self.blobs[blob])
-            layer.forward(*(bottom + top))
+            with Timer() as t:
+                layer.forward(*(bottom + top))
+            print("{} layer time: {}s".format(layer_param.type, t.interval))
         # print("Loss: {}".format(loss))
         return loss
 
